@@ -122,53 +122,61 @@ static void TestTLS()
 #if 1
 /* If librt is available, use CLOCK_MONOTONIC to implement GetMicrosecondsSinceStart,
  * if supported, so changes to the system clock don't cause problems. */
+static bool initialized = false;
 namespace
 {
 	clockid_t g_Clock = CLOCK_REALTIME;
+	std::once_flag g_initFlag;
+
 	void OpenGetTime()
 	{
-		static bool bInitialized = false;
-		
-		if( bInitialized )
-			return;
-		bInitialized = true;
+		std::call_once(g_initFlag, []() {
+			/* Check whether CLOCK_MONOTONIC is supported.
+			 * If it isn't available, use CLOCK_REALTIME. */
+			timespec ts;
+			if (clock_gettime(CLOCK_MONOTONIC, &ts) == -1)
+				return;
 
-		/* Check whether CLOCK_MONOTONIC is supported.
-		 * If it isn't available, use CLOCK_REALTIME.*/
-		timespec ts;
-		if( clock_gettime(CLOCK_MONOTONIC, &ts) == -1 )
-			return;
+			g_Clock = CLOCK_MONOTONIC;
+		});
+		initialized = true;
+	}
 
-		g_Clock = CLOCK_MONOTONIC;
+	void EnsureInitialized()
+	{
+		if (!initialized)
+		{
+			OpenGetTime();
+		}
 	}
 };
 
 clockid_t ArchHooks_Unix::GetClock()
 {
-	OpenGetTime();
+	EnsureInitialized();
 	return g_Clock;
 }
 
-std::int64_t ArchHooks::GetMicrosecondsSinceStart( bool bAccurate )
+std::int64_t ArchHooks::GetMicrosecondsSinceStart(bool bAccurate) noexcept
 {
-	OpenGetTime();
+	EnsureInitialized();
 
-	timespec ts;
-	clock_gettime( g_Clock, &ts );
+	thread_local timespec ts;
+	clock_gettime(g_Clock, &ts);
 
-	std::int64_t iRet = std::int64_t(ts.tv_sec) * 1000000 + std::int64_t(ts.tv_nsec)/1000;
-	if( g_Clock != CLOCK_MONOTONIC )
-		iRet = ArchHooks::FixupTimeIfBackwards( iRet );
+	std::int64_t iRet = std::int64_t(ts.tv_sec) * 1000000 + std::int64_t(ts.tv_nsec) / 1000;
+	if (g_Clock != CLOCK_MONOTONIC)
+		iRet = ArchHooks::FixupTimeIfBackwards(iRet);
 	return iRet;
 }
 #else
-std::int64_t ArchHooks::GetMicrosecondsSinceStart( bool bAccurate )
+std::int64_t ArchHooks::GetMicrosecondsSinceStart(bool bAccurate) noexcept
 {
-	struct timeval tv;
-	gettimeofday( &tv, nullptr );
+	thread_local struct timeval tv;
+	gettimeofday(&tv, nullptr);
 
 	std::int64_t iRet = std::int64_t(tv.tv_sec) * 1000000 + std::int64_t(tv.tv_usec);
-	ret = FixupTimeIfBackwards( ret );
+	iRet = FixupTimeIfBackwards(iRet);
 	return iRet;
 }
 #endif
