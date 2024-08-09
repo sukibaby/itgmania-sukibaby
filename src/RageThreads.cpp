@@ -682,10 +682,9 @@ void LockMutex::Unlock()
 
 	mutex.Unlock();
 
-	constexpr std::uint_fast64_t INVALID_TIME = static_cast<std::uint_fast64_t>(-1);
 	constexpr std::uint_fast64_t THRESHOLD_USEC = 15000;
 
-	if (file && locked_at != INVALID_TIME)
+	if (file && locked_at != FAST64MAX)
 	{
 		const std::uint_fast64_t current_usecs = RageTimer::GetUsecsSinceStart();
 		const std::uint_fast64_t dur_usecs = current_usecs - locked_at;
