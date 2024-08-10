@@ -1,3 +1,5 @@
+#pragma once
+
 #include "global.h"
 #include "ArchHooks.h"
 #include "RageUtil.h"
@@ -8,44 +10,37 @@
 
 #include <cstdint>
 #include <vector>
-
-// for QueryPerformanceCounter
 #include <windows.h>
 #include <mmsystem.h>
+
 #if defined(_MSC_VER)
 #pragma comment(lib, "winmm.lib")
 #endif
 
-static bool g_bTimerInitialized;
+constexpr std::int64_t MICROSECONDS_IN_SECOND = 1000000;
+
+static bool was_timer_initialized = false;
 
 /* QueryPerformanceCounter variables below.
  * QueryPerformanceCounter and QueryPerformanceFrequency expect
  * a LARGE_INTEGER, which is a union. These functions store data
  * in the QuadPart of the LARGE_INTEGER, which is a 64-bit integer. */
-LARGE_INTEGER g_liFrequency, g_liStartTime, g_liCurrentTime;
+static LARGE_INTEGER ticks_per_second;
+LARGE_INTEGER current_time;
 
 static void InitTimer()
 {
-	if( g_bTimerInitialized )
-		return;
-	g_bTimerInitialized = true;
-
-	// Grab important information for QPC during the timer initialization
-	QueryPerformanceCounter(&g_liStartTime);
-	QueryPerformanceFrequency(&g_liFrequency);
+	if (!was_timer_initialized) {
+		was_timer_initialized = true;
+		QueryPerformanceFrequency(&ticks_per_second);
+	}
 }
 
 std::int64_t ArchHooks::GetMicrosecondsSinceStart(bool bAccurate)
 {
-	// Make sure the timer is initialized
-	if (!g_bTimerInitialized)
-		InitTimer();
-
-	// Get the current time
-	QueryPerformanceCounter(&g_liCurrentTime);
-
-	// Calculate the elapsed time in microseconds.
-	return ((g_liCurrentTime.QuadPart - g_liStartTime.QuadPart) * 1000000.0) / g_liFrequency.QuadPart;
+	static bool initialized = (InitTimer(), true);
+	QueryPerformanceCounter(&current_time);
+	return (current_time.QuadPart * MICROSECONDS_IN_SECOND) / ticks_per_second.QuadPart;
 }
 
 static RString GetMountDir( const RString &sDirOfExecutable )
