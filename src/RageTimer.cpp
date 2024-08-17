@@ -30,13 +30,12 @@
 #include <cmath>
 #include <cstdint>
 
-const std::uint_fast64_t ONE_SECOND_IN_MICROSECONDS_FAST64 = 1000000;
 const std::uint64_t ONE_SECOND_IN_MICROSECONDS_ULL = 1000000ULL;
 const std::int64_t ONE_SECOND_IN_MICROSECONDS_LL = 1000000LL;
 const double ONE_SECOND_IN_MICROSECONDS_DBL = 1000000.0;
 
 const RageTimer RageZeroTimer(0,0);
-static const std::uint_fast64_t g_iStartTime = ArchHooks::GetMicrosecondsSinceStart( true );
+static std::uint64_t g_iStartTime = ArchHooks::GetMicrosecondsSinceStart( true );
 
 static std::uint64_t GetTime( bool /* bAccurate */ )
 {
@@ -53,17 +52,12 @@ static std::uint64_t GetTime( bool /* bAccurate */ )
  * and do thorough testing if you change anything here. -sukibaby */
 double RageTimer::GetTimeSinceStart(bool bAccurate)
 {
-	constexpr double USEC_TO_SEC = 1.0 / 1000000.0;
-	return static_cast<double>(RageTimer::GetUsecsSinceStart()) * USEC_TO_SEC;
+	std::uint64_t usecs = GetTime(bAccurate);
+	usecs -= g_iStartTime;
+	return usecs / ONE_SECOND_IN_MICROSECONDS_DBL;
 }
 
-int RageTimer::GetTimeSinceBasic()
-{
-    std::uint_fast64_t usec = RageTimer::GetUsecsSinceStart();
-    return static_cast<int>(usec / ONE_SECOND_IN_MICROSECONDS_FAST64);
-}
-
-std::uint_fast64_t RageTimer::GetUsecsSinceStart()
+std::uint64_t RageTimer::GetUsecsSinceStart()
 {
 	return GetTime(true) - g_iStartTime;
 }

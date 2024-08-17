@@ -268,7 +268,7 @@ void RageLog::Write( int where, const RString &sLine )
 		puts( sWarningSeparator );
 	}
 
-	RString sTimestamp = UsecsToMMSSMsMsMs( RageTimer::GetUsecsSinceStart() ) + ": ";
+	RString sTimestamp = SecondsToMMSSMsMsMs( RageTimer::GetTimeSinceStart() ) + ": ";
 	RString sWarning;
 	if( where & WRITE_LOUD )
 		sWarning = "WARNING: ";

@@ -662,7 +662,7 @@ LockMutex::LockMutex( RageMutex &pMutex, const char *file_, int line_ ):
 	mutex( pMutex ),
 	file( file_ ),
 	line( line_ ),
-	locked_at( RageTimer::GetUsecsSinceStart() ),
+	locked_at( RageTimer::GetTimeSinceStart() ),
 	locked(false) // ensure it gets locked inside.
 {
 	mutex.Lock();
@@ -682,15 +682,11 @@ void LockMutex::Unlock()
 
 	mutex.Unlock();
 
-	constexpr std::uint_fast64_t THRESHOLD_USEC = 15000;
-
-	if (file && locked_at != FAST64MAX)
+	if( file && locked_at != -1 )
 	{
-		const std::uint_fast64_t current_usecs = RageTimer::GetUsecsSinceStart();
-		const std::uint_fast64_t dur_usecs = current_usecs - locked_at;
-
-		if (dur_usecs > THRESHOLD_USEC)
-			LOG->Trace("Lock at %s:%i took %llu microseconds", file, line, dur_usecs);
+		const float dur = RageTimer::GetTimeSinceStart() - locked_at;
+		if( dur > 0.015f )
+			LOG->Trace( "Lock at %s:%i took %f", file, line, dur );
 	}
 }
 
