@@ -20,12 +20,19 @@ public:
 	// Extend the buffer as if write() was called with a buffer of silence.
 	void Extend( unsigned iSamples ) noexcept;
 
-	void read( std::int16_t *pBuf ) noexcept;
-	void read( float *pBuf ) noexcept;
+	// Deinterlaces the mixed audio buffer into separate channel buffers.
 	void read_deinterlace( float **pBufs, int channels ) noexcept;
+
+	// Returns a pointer to the internal mixed audio buffer.
 	float *read() { return m_pMixbuf; }
+
+	// Returns the number of samples in the mixed audio buffer.
 	unsigned size() const { return m_iBufUsed; }
-	void SetWriteOffset( int iOffset ) noexcept;
+
+	// Inline functions below
+	void SetWriteOffset(int iOffset) noexcept;
+	void read(std::int16_t *pBuf) noexcept;
+	void read(float *pBuf) noexcept;
 
 private:
 	float *m_pMixbuf;
@@ -33,6 +40,29 @@ private:
 	std::int_fast64_t m_iBufUsed; // used samples
 	std::int_fast32_t m_iOffset;
 };
+
+inline void RageSoundMixBuffer::SetWriteOffset(int iOffset) noexcept
+{
+    m_iOffset = iOffset;
+}
+
+inline void RageSoundMixBuffer::read(std::int16_t *pBuf) noexcept
+{
+    constexpr int16_t MAX_INT16 = 32767;
+    for (unsigned iPos = 0; iPos < m_iBufUsed; ++iPos)
+    {
+        float iOut = m_pMixbuf[iPos];
+        iOut = clamp(iOut, -1.0f, +1.0f);
+        pBuf[iPos] = static_cast<int16_t>((iOut * MAX_INT16) + 0.5f);
+    }
+    m_iBufUsed = 0;
+}
+
+inline void RageSoundMixBuffer::read(float *pBuf) noexcept
+{
+    std::memcpy(pBuf, m_pMixbuf, m_iBufUsed * sizeof(float));
+    m_iBufUsed = 0;
+}
 
 #endif
 

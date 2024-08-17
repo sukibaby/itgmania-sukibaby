@@ -19,13 +19,6 @@ RageSoundMixBuffer::~RageSoundMixBuffer()
 	std::free(m_pMixbuf);
 }
 
-/* write() will start mixing iOffset samples into the buffer.  Be careful; this is
- * measured in samples, not frames, so if the data is stereo, multiply by two. */
-void RageSoundMixBuffer::SetWriteOffset( int iOffset ) noexcept
-{
-	m_iOffset = iOffset;
-}
-
 void RageSoundMixBuffer::Extend(unsigned iSamples) noexcept
 {
     const std::int_fast64_t realsize = static_cast<std::int_fast64_t>(iSamples) + static_cast<std::int_fast64_t>(m_iOffset);
@@ -63,23 +56,6 @@ void RageSoundMixBuffer::write( const float *pBuf, unsigned iSize, int iSourceSt
 		pDestBuf += iDestStride;
 		--iSize;
 	}
-}
-
-void RageSoundMixBuffer::read( std::int16_t *pBuf ) noexcept
-{
-	for( unsigned iPos = 0; iPos < m_iBufUsed; ++iPos )
-	{
-		float iOut = m_pMixbuf[iPos];
-		iOut = clamp( iOut, -1.0f, +1.0f );
-		pBuf[iPos] = static_cast<int>((iOut * 32767) + 0.5);
-	}
-	m_iBufUsed = 0;
-}
-
-void RageSoundMixBuffer::read( float *pBuf ) noexcept
-{
-	std::memcpy( pBuf, m_pMixbuf, m_iBufUsed * sizeof(float) );
-	m_iBufUsed = 0;
 }
 
 void RageSoundMixBuffer::read_deinterlace( float **pBufs, int channels ) noexcept
