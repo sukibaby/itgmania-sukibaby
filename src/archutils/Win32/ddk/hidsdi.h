@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) Microsoft Corporation. All rights reserved.
+Copyright (c) 1996    Microsoft Corporation
 
 Module Name:
 
@@ -20,18 +20,16 @@ Environment:
 
 #ifndef _HIDSDI_H
 #define _HIDSDI_H
-#include <winapifamily.h>
-
-#pragma region Desktop Family
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include <pshpack4.h>
 
-typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
+//#include "wtypes.h"
+
+//#include <windef.h>
+//#include <win32.h>
+//#include <basetyps.h>
+
+typedef LONG NTSTATUS;
 #include "hidusage.h"
 #include "hidpi.h"
 
@@ -56,12 +54,11 @@ typedef struct _HIDD_ATTRIBUTES {
     //
 } HIDD_ATTRIBUTES, *PHIDD_ATTRIBUTES;
 
-_Must_inspect_result_
-_Success_(return==TRUE)
+
 BOOLEAN __stdcall
 HidD_GetAttributes (
-    _In_  HANDLE              HidDeviceObject,
-    _Out_ PHIDD_ATTRIBUTES    Attributes
+    IN  HANDLE              HidDeviceObject,
+    OUT PHIDD_ATTRIBUTES    Attributes
     );
 /*++
 Routine Description:
@@ -73,15 +70,13 @@ Routine Description:
 
 void __stdcall
 HidD_GetHidGuid (
-   _Out_  LPGUID   HidGuid
+   OUT   LPGUID   HidGuid
    );
 
-_Must_inspect_result_
-_Success_(return==TRUE)
 BOOLEAN __stdcall
 HidD_GetPreparsedData (
-   _In_   HANDLE                  HidDeviceObject,
-   _Out_ _When_(return!=0, __drv_allocatesMem(Mem))  PHIDP_PREPARSED_DATA  * PreparsedData
+   IN    HANDLE                  HidDeviceObject,
+   OUT   PHIDP_PREPARSED_DATA  * PreparsedData
    );
 /*++
 Routine Description:
@@ -103,16 +98,15 @@ Return Value:
    TRUE if successful.
    FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
-_Success_(return==TRUE)
+
 BOOLEAN __stdcall
 HidD_FreePreparsedData (
-   _In_ __drv_freesMem(Mem) PHIDP_PREPARSED_DATA PreparsedData
+   IN    PHIDP_PREPARSED_DATA PreparsedData
    );
 
-_Success_(return==TRUE)
 BOOLEAN __stdcall
 HidD_FlushQueue (
-   _In_    HANDLE                HidDeviceObject
+   IN    HANDLE                HidDeviceObject
    );
 /*++
 Routine Description:
@@ -127,13 +121,12 @@ Return Value:
    TRUE if successful
    FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
-_Must_inspect_result_
-_Success_(return==TRUE)
+
 BOOLEAN __stdcall
 HidD_GetConfiguration (
-   _In_   HANDLE               HidDeviceObject,
-   _Out_writes_bytes_(ConfigurationLength) PHIDD_CONFIGURATION Configuration,
-   _In_   ULONG                ConfigurationLength
+   IN   HANDLE               HidDeviceObject,
+   OUT  PHIDD_CONFIGURATION  Configuration,
+   IN   ULONG                ConfigurationLength
    );
 /*++
 Routine Description:
@@ -154,13 +147,12 @@ Return Value:
    TRUE if successful
    FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
-_Must_inspect_result_
-_Success_(return==TRUE)
+
 BOOLEAN __stdcall
 HidD_SetConfiguration (
-   _In_   HANDLE               HidDeviceObject,
-   _In_reads_bytes_(ConfigurationLength) PHIDD_CONFIGURATION Configuration,
-   _In_   ULONG                ConfigurationLength
+   IN   HANDLE               HidDeviceObject,
+   IN   PHIDD_CONFIGURATION  Configuration,
+   IN   ULONG                ConfigurationLength
    );
 /*++
 Routine Description:
@@ -185,13 +177,12 @@ Return Value:
     TRUE if successful
     FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
-_Must_inspect_result_
-_Success_(return==TRUE)
+
 BOOLEAN __stdcall
 HidD_GetFeature (
-   _In_    HANDLE   HidDeviceObject,
-   _Out_writes_bytes_(ReportBufferLength) PVOID ReportBuffer,
-   _In_    ULONG    ReportBufferLength
+   IN    HANDLE   HidDeviceObject,
+   OUT   PVOID    ReportBuffer,
+   IN    ULONG    ReportBufferLength
    );
 /*++
 Routine Description:
@@ -212,13 +203,12 @@ Return Value:
     TRUE if successful
     FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
-_Must_inspect_result_
-_Success_(return==TRUE)
+
 BOOLEAN __stdcall
 HidD_SetFeature (
-   _In_    HANDLE   HidDeviceObject,
-   _In_reads_bytes_(ReportBufferLength) PVOID ReportBuffer,
-   _In_    ULONG    ReportBufferLength
+   IN    HANDLE   HidDeviceObject,
+   IN    PVOID    ReportBuffer,
+   IN    ULONG    ReportBufferLength
    );
 /*++
 Routine Description:
@@ -238,67 +228,10 @@ Return Value:
     FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
 
-#if (NTDDI_VERSION >= NTDDI_WINXP) 
-_Must_inspect_result_
-_Success_(return==TRUE)
-BOOLEAN __stdcall
-HidD_GetInputReport (
-   _In_    HANDLE   HidDeviceObject,
-   _Out_writes_bytes_(ReportBufferLength) PVOID ReportBuffer,
-   _In_    ULONG    ReportBufferLength
-   );
-/*++
-Routine Description:
-    Retrieve an input report from a HID device.
-
-Arguments:
-    HidDeviceObject      A handle to a Hid Device Object.
- 
-    ReportBuffer         The buffer that the input report should be placed 
-                         into.  The first byte of the buffer should be set to
-                         the report ID of the desired report
- 
-    ReportBufferLength   The size (in bytes) of ReportBuffer.  This value 
-                         should be greater than or equal to the 
-                         InputReportByteLength field as specified in the 
-                         HIDP_CAPS structure for the device
-Return Value:
-    TRUE if successful
-    FALSE otherwise  -- Use GetLastError() to get extended error information
---*/
-_Must_inspect_result_
-_Success_(return==TRUE)
-BOOLEAN __stdcall
-HidD_SetOutputReport (
-   _In_    HANDLE   HidDeviceObject,
-   _In_reads_bytes_(ReportBufferLength) PVOID ReportBuffer,
-   _In_    ULONG    ReportBufferLength
-   );
-/*++
-Routine Description:
-    Send an output report to a HID device.
-
-Arguments:
-    HidDeviceObject      A handle to a Hid Device Object.
- 
-    ReportBuffer         The buffer of the output report to send to the device
- 
-    ReportBufferLength   The size (in bytes) of ReportBuffer.  This value 
-                         should be greater than or equal to the 
-                         OutputReportByteLength field as specified in the 
-                         HIDP_CAPS structure for the device
-Return Value:
-    TRUE if successful
-    FALSE otherwise  -- Use GetLastError() to get extended error information
---*/
-
-#endif
-_Must_inspect_result_
-_Success_(return==TRUE)
 BOOLEAN __stdcall
 HidD_GetNumInputBuffers (
-    _In_  HANDLE  HidDeviceObject,
-    _Out_ PULONG  NumberBuffers
+    IN  HANDLE  HidDeviceObject,
+    OUT PULONG  NumberBuffers
     );
 /*++
 Routine Description:
@@ -317,12 +250,11 @@ Return Value:
     TRUE if successful
     FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
-_Must_inspect_result_
-_Success_(return==TRUE)
+
 BOOLEAN __stdcall
 HidD_SetNumInputBuffers (
-    _In_ HANDLE HidDeviceObject,
-    _In_ ULONG  NumberBuffers
+    IN  HANDLE HidDeviceObject,
+    OUT ULONG  NumberBuffers
     );
 /*++
 
@@ -342,13 +274,12 @@ Return Value:
     TRUE if successful
     FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
-_Must_inspect_result_
-_Success_(return==TRUE)
+
 BOOLEAN __stdcall
 HidD_GetPhysicalDescriptor (
-   _In_    HANDLE   HidDeviceObject,
-   _Out_writes_bytes_(BufferLength) PVOID Buffer,
-   _In_    ULONG    BufferLength
+   IN    HANDLE   HidDeviceObject,
+   OUT   PVOID    Buffer,
+   IN    ULONG    BufferLength
    );
 /*++
 Routine Description:
@@ -369,13 +300,12 @@ Return Value:
     TRUE if successful
     FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
-_Must_inspect_result_
-_Success_(return==TRUE)
+
 BOOLEAN __stdcall
 HidD_GetManufacturerString (
-   _In_    HANDLE   HidDeviceObject,
-   _Out_writes_bytes_(BufferLength) PVOID Buffer,
-   _In_    ULONG    BufferLength
+   IN    HANDLE   HidDeviceObject,
+   OUT   PVOID    Buffer,
+   IN    ULONG    BufferLength
    );
 /*++
 Routine Description:
@@ -396,13 +326,12 @@ Return Value:
     TRUE if successful
     FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
-_Must_inspect_result_
-_Success_(return==TRUE)
+
 BOOLEAN __stdcall
 HidD_GetProductString (
-   _In_    HANDLE   HidDeviceObject,
-   _Out_writes_bytes_(BufferLength) PVOID Buffer,
-   _In_    ULONG    BufferLength
+   IN    HANDLE   HidDeviceObject,
+   OUT   PVOID    Buffer,
+   IN    ULONG    BufferLength
    );
 /*++
 Routine Description:
@@ -423,14 +352,13 @@ Return Value:
     TRUE if successful
     FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
-_Must_inspect_result_
-_Success_(return==TRUE)
+
 BOOLEAN __stdcall
 HidD_GetIndexedString (
-   _In_    HANDLE   HidDeviceObject,
-   _In_    ULONG    StringIndex,
-   _Out_writes_bytes_(BufferLength) PVOID Buffer,
-   _In_    ULONG    BufferLength
+   IN    HANDLE   HidDeviceObject,
+   IN    ULONG    StringIndex,
+   OUT   PVOID    Buffer,
+   IN    ULONG    BufferLength
    );
 /*++
 Routine Description:
@@ -452,13 +380,12 @@ Return Value:
     TRUE if successful
     FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
-_Must_inspect_result_
-_Success_(return==TRUE)
+
 BOOLEAN __stdcall
 HidD_GetSerialNumberString (
-   _In_    HANDLE   HidDeviceObject,
-   _Out_writes_bytes_(BufferLength) PVOID Buffer,
-   _In_    ULONG    BufferLength
+   IN    HANDLE   HidDeviceObject,
+   OUT   PVOID    Buffer,
+   IN    ULONG    BufferLength
    );
 /*++
 Routine Description:
@@ -479,42 +406,8 @@ Return Value:
     FALSE otherwise  -- Use GetLastError() to get extended error information
 --*/
 
-#if (NTDDI_VERSION >= NTDDI_WINXP) 
-_Must_inspect_result_
-_Success_(return==TRUE)
-BOOLEAN __stdcall
-HidD_GetMsGenreDescriptor (
-   _In_    HANDLE   HidDeviceObject,
-   _Out_writes_bytes_(BufferLength) PVOID Buffer,
-   _In_    ULONG    BufferLength
-   );
-/*++
-Routine Description:
-    This function retrieves the Microsoft Genre descriptor from the specified 
-    Hid device.  
-
-Arguments:
-    HidDeviceObject      A handle to a Hid Device Object.
- 
-    Buffer               Buffer which on return will contain the descriptor
-                         returned from the device.
-                         
-    BufferLength         Length of Buffer (in bytes)
-
-Return Value:
-    TRUE if successful
-    FALSE otherwise  -- Use GetLastError() to get extended error information
---*/
-#endif
-
 
 #include <poppack.h>
 
-#ifdef __cplusplus
-}
 #endif
 
-#endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) */
-#pragma endregion
-
-#endif
