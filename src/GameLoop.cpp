@@ -42,9 +42,6 @@ void GameLoop::SetUpdateRate( float fUpdateRate )
 
 static void CheckGameLoopTimerSkips( float fDeltaTime )
 {
-	if( !PREFSMAN->m_bLogSkips )
-		return;
-
 	static int iLastFPS = 0;
 	int iThisFPS = DISPLAY->GetFPS();
 
@@ -247,6 +244,9 @@ void GameLoop::UpdateAllButDraw(bool bRunningFromVBLANK)
 {
 	// Flag to indicate whether an update has been processed during the VBLANK period.
 	static bool m_bUpdatedDuringVBLANK = false;
+	
+	// Assume this preference isn't going to change while the game is running.
+	static bool bLogSkips = PREFSMAN->m_bLogSkips;
 
 	// If we're running from VBLANK, and we've already updated during the VBLANK period,
 	// don't update again. This is to prevent multiple updates during the same VBLANK period.
@@ -273,7 +273,10 @@ void GameLoop::UpdateAllButDraw(bool bRunningFromVBLANK)
 		? g_fConstantUpdateDeltaSeconds 
 		: g_GameplayTimer.GetDeltaTime();
 
-	CheckGameLoopTimerSkips(fDeltaTime);
+    if (bLogSkips)
+    {
+        CheckGameLoopTimerSkips(fDeltaTime);
+    }
 
 	fDeltaTime *= g_fUpdateRate;
 
@@ -306,8 +309,6 @@ void GameLoop::UpdateAllButDraw(bool bRunningFromVBLANK)
 
 void GameLoop::RunGameLoop()
 {
-	static int CheckInputDevicesCounter = 0;
-	
 	/* People may want to do something else while songs are loading, so do
 	 * this after loading songs. */
 	if( ChangeAppPri() )
@@ -328,13 +329,13 @@ void GameLoop::RunGameLoop()
 
 		UpdateAllButDraw(false);
 		
-		// This loop runs every frame, so the input devices will be checked every 500 frames.
-		if (CheckInputDevicesCounter % (500) == 0)
+		/* uint8_t's max value is 255, so we will
+		 * check input devices every 255 frames. */
+		static uint8_t i_CheckInputDevices = 0;
+		if (++i_CheckInputDevices == 0)
 		{
 			CheckInputDevices();
-			CheckInputDevicesCounter = 0;
 		}
-		CheckInputDevicesCounter++;
 		
 		SCREENMAN->Draw();
 	}
