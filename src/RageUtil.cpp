@@ -1836,15 +1836,8 @@ void UnicodeUpperLower( wchar_t *p, std::size_t iLen, const unsigned char pMappi
 	wchar_t *pEnd = p + iLen;
 	while( p != pEnd )
 	{
-		// wchar_t can be signed or unsigned depending on the platform and the compiler.
-		// We use WCHAR_MIN to determine a valid condition that won't emit a type-limits warning.
-		#if WCHAR_MIN != 0
-		if( *p >= 0 && *p < 256 ) {
-		#else
-		if( *p < 256 ) {
-		#endif
+		if( *p >= 0 && *p < 256 )
 			*p = pMapping[*p];
-		}
 		++p;
 	}
 }
