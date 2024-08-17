@@ -125,7 +125,7 @@ void ScreenStatsOverlay::UpdateSkips()
 
 	if( skip )
 	{
-		RString sTime( SecondsToMMSSMsMs(RageTimer::GetTimeSinceStartFast()) );
+		RString sTime( UsecsToMMSSMsMs(RageTimer::GetUsecsSinceStart()) );
 
 		static const RageColor colors[] =
 		{
