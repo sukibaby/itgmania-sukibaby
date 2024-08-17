@@ -9,12 +9,7 @@
 #include <cstdint>
 #include <list>
 
-// The number of frames we should keep pos_map data for.
-// This comes out to about ~800kb in audio frames, assuming 44.1khz.
-// File bitrate, metadata, etc will factor in here. If the queue is
-// TOO big it will make things slow, but 200k frames is no problem.
-// Making the queue larger than 200k hasn't been tested extensively.
-const int pos_map_backlog_frames = 200000;
+static int pos_map_backlog_frames = 80000; // ideal value --sukibaby
 
 struct pos_map_t
 {
@@ -165,7 +160,7 @@ std::int64_t pos_map_queue::Search( std::int64_t iSourceFrame, bool *bApproximat
 	if( last.PeekDeltaTime() >= 1.0f )
 	{
 		last.Touch();
-		LOG->Trace("Audio frame was out of range of the data sent - possible buffer underflow? This is not always an error, however if you see it frequently there could be sound buffer problems.");
+		LOG->Trace("Unexpected audio frame out of range (%lld). Not an issue if you were in the song wheel at this time.",iSourceFrame);
 	}
 
 	if( bApproximate )
