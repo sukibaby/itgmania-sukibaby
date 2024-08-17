@@ -867,7 +867,15 @@ void NoteField::DrawPrimitives()
 		ASSERT(GAMESTATE->m_pCurSong != nullptr);
 
 		const TimingData &timing = *pTiming;
-		const RageColor text_glow= RageColor(1,1,1,std::cos(RageTimer::GetTimeSinceStartFast()*2)/2+0.5f);
+
+		// Create an oscillating / pulsing glow effect.
+		// Converts a counter to radians and uses the cosine for a cyclic appearance.
+		// Ideally, m_iGlowCounter shouldn't exceed 360 (hence uint8_t).
+		static std::uint8_t m_iGlowCounter;
+		static constexpr float f_Cyclical = 2.0f * 3.14159265f / 360.0f;
+		float phase = (++m_iGlowCounter) * f_Cyclical;
+		float glow = std::cos(phase) * 0.5f + 0.5f;
+		const RageColor text_glow = RageColor(1.0f, 1.0f, 1.0f, glow);
 
 		float horiz_align= align_right;
 		float side_sign= 1;
