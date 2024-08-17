@@ -15,23 +15,23 @@ public:
 	static constexpr size_t BUF_SIZE = 2 * 1024 * 1024 / sizeof(float);
 
 	// Mix the given buffer of samples.
-	void write( const float *pBuf, unsigned iSize, int iSourceStride = 1, int iDestStride = 1 );
+	void write( const float *pBuf, unsigned iSize, int iSourceStride = 1, int iDestStride = 1 ) noexcept;
 
 	// Extend the buffer as if write() was called with a buffer of silence.
-	void Extend( unsigned iSamples );
+	void Extend( unsigned iSamples ) noexcept;
 
-	void read( std::int16_t *pBuf );
-	void read( float *pBuf );
-	void read_deinterlace( float **pBufs, int channels );
+	void read( std::int16_t *pBuf ) noexcept;
+	void read( float *pBuf ) noexcept;
+	void read_deinterlace( float **pBufs, int channels ) noexcept;
 	float *read() { return m_pMixbuf; }
 	unsigned size() const { return m_iBufUsed; }
-	void SetWriteOffset( int iOffset );
+	void SetWriteOffset( int iOffset ) noexcept;
 
 private:
 	float *m_pMixbuf;
-	std::uint64_t m_iBufSize; // actual allocated samples
-	std::uint64_t m_iBufUsed; // used samples
-	int m_iOffset;
+	std::int_fast64_t m_iBufSize; // actual allocated samples
+	std::int_fast64_t m_iBufUsed; // used samples
+	std::int_fast32_t m_iOffset;
 };
 
 #endif
