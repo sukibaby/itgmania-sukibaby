@@ -43,25 +43,25 @@ private:
 
 inline void RageSoundMixBuffer::SetWriteOffset(int iOffset) noexcept
 {
-    m_iOffset = iOffset;
+	m_iOffset = iOffset;
 }
 
 inline void RageSoundMixBuffer::read(std::int16_t *pBuf) noexcept
 {
-    constexpr int16_t MAX_INT16 = 32767;
-    for (unsigned iPos = 0; iPos < m_iBufUsed; ++iPos)
-    {
-        float iOut = m_pMixbuf[iPos];
-        iOut = clamp(iOut, -1.0f, +1.0f);
-        pBuf[iPos] = static_cast<int16_t>((iOut * MAX_INT16) + 0.5f);
-    }
-    m_iBufUsed = 0;
+	constexpr int16_t MAX_INT16 = 32767;
+	for (unsigned iPos = 0; iPos < m_iBufUsed; ++iPos)
+	{
+		float iOut = m_pMixbuf[iPos];
+		iOut = std::max(-1.0f, std::min(iOut, 1.0f));
+		pBuf[iPos] = static_cast<int16_t>((iOut * MAX_INT16) + 0.5f);
+	}
+	m_iBufUsed = 0;
 }
 
 inline void RageSoundMixBuffer::read(float *pBuf) noexcept
 {
-    std::memcpy(pBuf, m_pMixbuf, m_iBufUsed * sizeof(float));
-    m_iBufUsed = 0;
+	std::memcpy(pBuf, m_pMixbuf, m_iBufUsed * sizeof(float));
+	m_iBufUsed = 0;
 }
 
 #endif
