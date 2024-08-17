@@ -168,7 +168,7 @@ float MovieDecoder_FFMpeg::GetTimestamp() const
 	}
 
 	// In a logical situation, this means that display is outpacing decoding.
-	if (m_iFrameNumber >= m_FrameBuffer.size()) {
+	if (m_iFrameNumber >= static_cast<int>(m_FrameBuffer.size())) {
 		return 0;
 	}
 	return m_FrameBuffer[m_iFrameNumber].frameTimestamp;
@@ -176,7 +176,7 @@ float MovieDecoder_FFMpeg::GetTimestamp() const
 
 bool MovieDecoder_FFMpeg::IsCurrentFrameReady() {
 	// We're displaying faster than decoding. Do not even try to display the frame.
-	if (m_iFrameNumber >= m_FrameBuffer.size()) {
+	if (m_iFrameNumber >= static_cast<int>(m_FrameBuffer.size())) {
 		return false;
 	}
 	// If the whole movie is decoded, then the frame is definitely ready.
@@ -184,7 +184,7 @@ bool MovieDecoder_FFMpeg::IsCurrentFrameReady() {
 		return true;
 	}
 
-	std::lock_guard<std::mutex>(m_FrameBuffer[m_iFrameNumber].lock);
+	std::lock_guard<std::mutex> lock(m_FrameBuffer[m_iFrameNumber].lock);
 	if (m_FrameBuffer[m_iFrameNumber].skip) {
 		LOG->Info("Frame %i not decoded, skipping...", m_iFrameNumber);
 		return true;
@@ -199,7 +199,7 @@ int MovieDecoder_FFMpeg::DecodeNextFrame()
 {
 	// Add in a new FrameBuffer entry, and lock it immediately.
 	m_FrameBuffer.push_back(FrameHolder());
-	std::lock_guard<std::mutex>(m_FrameBuffer.back().lock);
+	std::lock_guard<std::mutex> lock(m_FrameBuffer.back().lock);
 	int status = SendPacketToBuffer();
 	if (status < 0) {
 		return status;
