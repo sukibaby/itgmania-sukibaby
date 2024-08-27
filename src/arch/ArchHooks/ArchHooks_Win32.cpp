@@ -150,13 +150,16 @@ void ArchHooks_Win32::SetTime( tm newtime )
 
 void ArchHooks_Win32::BoostPriority()
 {
-	// Be sure to boost the app, not the thread, to make sure the sound thread stays higher priority than the main thread.
-	SetPriorityClass( GetCurrentProcess(), HIGH_PRIORITY_CLASS );
+	// We just want a slight boost, so we don't skip needlessly if something happens
+	// in the background. We don't really want to be high-priority—above normal should
+	// be enough. Be sure to boost the app, not the thread, to make sure the
+	// sound thread stays higher priority than the main thread.
+	SetPriorityClass( GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS );
 }
 
 void ArchHooks_Win32::UnBoostPriority()
 {
-	SetPriorityClass( GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS );
+	SetPriorityClass( GetCurrentProcess(), NORMAL_PRIORITY_CLASS );
 }
 
 void ArchHooks_Win32::SetupConcurrentRenderingThread()
