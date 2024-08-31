@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <numeric>
+#include <vector>
 
 constexpr int FILTER_LENGTH = 8; // This must be a power of 2.
 constexpr float VERY_TINY_NUMBER = 0.0000001f; // Used to avoid division by zero.
@@ -669,7 +670,8 @@ int RageSoundReader_Resample_Good::Read( float *pBuf, int iFrames )
 
 	{
 		int iFramesNeeded = m_apResamplers[0]->NumInputsForOutputSamples(iFrames);
-		float *pTmpBuf = (float *) alloca( iFramesNeeded * sizeof(float) * iChannels );
+		std::vector<float> tmpBuf(iFramesNeeded * iChannels);
+		float *pTmpBuf = tmpBuf.data();
 		int iFramesIn = m_pSource->Read( pTmpBuf, iFramesNeeded );
 		if( iFramesIn < 0 )
 			return iFramesIn;
