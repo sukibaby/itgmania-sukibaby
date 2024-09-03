@@ -105,13 +105,8 @@ void pos_map_impl::Cleanup()
 
 std::int64_t pos_map_queue::Search( std::int64_t iSourceFrame, bool *bApproximate ) const
 {
-	if( bApproximate )
-		*bApproximate = false;
-
 	if( IsEmpty() )
 	{
-		if( bApproximate )
-			*bApproximate = true;
 		return 0;
 	}
 
@@ -163,8 +158,6 @@ std::int64_t pos_map_queue::Search( std::int64_t iSourceFrame, bool *bApproximat
 		LOG->Trace("Unexpected audio frame out of range (%lld). Not an issue if you were in the song wheel at this time.",iSourceFrame);
 	}
 
-	if( bApproximate )
-		*bApproximate = true;
 	return iClosestPosition;
 }
 
