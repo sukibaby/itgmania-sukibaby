@@ -5,19 +5,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-
-RageSoundMixBuffer::RageSoundMixBuffer()
-{
-	m_iBufSize = 0;
-	m_iBufUsed = 0;
-	m_pMixbuf = nullptr;
-	m_iOffset = 0;
-}
-
-RageSoundMixBuffer::~RageSoundMixBuffer()
-{
-	std::free(m_pMixbuf);
-}
+#include <vector>
 
 void RageSoundMixBuffer::Extend(unsigned iSamples) noexcept
 {
@@ -27,13 +15,13 @@ void RageSoundMixBuffer::Extend(unsigned iSamples) noexcept
 
 	if( m_iBufSize < newsize )
 	{
-		m_pMixbuf = static_cast<float*>(std::realloc(m_pMixbuf, sizeof(float) * newsize));
+		m_pMixbuf.resize(newsize);
 		m_iBufSize = newsize;
 	}
 
 	if( m_iBufUsed < realsize )
 	{
-		std::memset(m_pMixbuf + m_iBufUsed, 0, (realsize - m_iBufUsed) * sizeof(float));
+		std::fill(m_pMixbuf.begin() + m_iBufUsed, m_pMixbuf.begin() + realsize, 0.0f);
 		m_iBufUsed = realsize;
 	}
 }
@@ -47,7 +35,7 @@ void RageSoundMixBuffer::write( const float *pBuf, unsigned iSize, int iSourceSt
 	Extend( iSize * iDestStride - (iDestStride-1) );
 
 	// Scale volume and add.
-	float *pDestBuf = m_pMixbuf+m_iOffset;
+	float *pDestBuf = m_pMixbuf.data() + m_iOffset;
 
 	while( iSize )
 	{

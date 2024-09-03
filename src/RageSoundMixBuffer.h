@@ -4,13 +4,11 @@
 #define RAGE_SOUND_MIX_BUFFER_H
 
 #include <cstdint>
+#include <vector>
 
 class RageSoundMixBuffer
 {
 public:
-	RageSoundMixBuffer();
-	~RageSoundMixBuffer();
-
 	// Mix the given buffer of samples.
 	void write( const float *pBuf, unsigned iSize, int iSourceStride = 1, int iDestStride = 1 ) noexcept;
 
@@ -21,7 +19,7 @@ public:
 	void read_deinterlace( float **pBufs, int channels ) noexcept;
 
 	// Returns a pointer to the internal mixed audio buffer.
-	float *read() { return m_pMixbuf; }
+	float *read() { return m_pMixbuf.data(); }
 
 	// Returns the number of samples in the mixed audio buffer.
 	unsigned size() const { return m_iBufUsed; }
@@ -32,10 +30,10 @@ public:
 	void read(float *pBuf) noexcept;
 
 private:
-	float *m_pMixbuf;
-	std::int_fast64_t m_iBufSize; // the actual allocated samples
-	std::int_fast64_t m_iBufUsed; // the number of samples currently held in the buffer
-	std::int_fast64_t m_iOffset; // the offset in samples to start mixing into the buffer
+	std::vector<float> m_pMixbuf;
+	std::int_fast64_t m_iBufSize = 0; // the actual allocated samples
+	std::int_fast64_t m_iBufUsed = 0; // the number of samples currently held in the buffer
+	std::int_fast64_t m_iOffset = 0; // the offset in samples to start mixing into the buffer
 };
 
 // Inline functions
@@ -53,7 +51,7 @@ inline void RageSoundMixBuffer::read(std::int16_t *pBuf) noexcept
 
 inline void RageSoundMixBuffer::read(float *pBuf) noexcept
 {
-	std::memcpy(pBuf, m_pMixbuf, m_iBufUsed * sizeof(float));
+	std::memcpy(pBuf, m_pMixbuf.data(), m_iBufUsed * sizeof(float));
 	m_iBufUsed = 0;
 }
 
