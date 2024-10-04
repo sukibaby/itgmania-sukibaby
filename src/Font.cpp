@@ -904,7 +904,7 @@ void Font::Load( const RString &sIniPath, RString sChars )
 	if( LoadStack.empty() )
 	{
 		// Cache ASCII glyphs.
-		ZERO( m_iCharToGlyphCache );
+		RageUtil::Zero( m_iCharToGlyphCache );
 		std::map<wchar_t,glyph*>::iterator it;
 		for( it = m_iCharToGlyph.begin(); it != m_iCharToGlyph.end(); ++it )
 			if( it->first < (int) ARRAYLEN(m_iCharToGlyphCache) )

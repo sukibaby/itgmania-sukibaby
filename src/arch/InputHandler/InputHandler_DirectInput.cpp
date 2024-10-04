@@ -1037,7 +1037,7 @@ static wchar_t ScancodeAndKeysToChar( DWORD scancode, unsigned char keys[256] )
 	}
 
 	unsigned short result[2]; // ToAscii writes a max of 2 chars
-	ZERO( result );
+	RageUtil::Zero( result );
 
 	if( pToUnicodeEx != nullptr )
 	{
@@ -1082,7 +1082,7 @@ wchar_t InputHandler_DInput::DeviceButtonToChar( DeviceButton button, bool bUseC
 				continue;
 
 			unsigned char keys[256];
-			ZERO( keys );
+			RageUtil::Zero( keys );
 			if( bUseCurrentKeyModifiers )
 				GetKeyboardState(keys);
 			// todo: handle Caps Lock -freem

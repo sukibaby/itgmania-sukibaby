@@ -45,9 +45,9 @@ void LightsDriver::Create( const RString &sDrivers, std::vector<LightsDriver *> 
 void LightsDriver::Reset()
 {
 	LightsState state;
-	ZERO( state.m_bCabinetLights );
-	ZERO( state.m_bGameButtonLights );
-	ZERO( state.m_bCoinCounter );
+	RageUtil::Zero( state.m_bCabinetLights );
+	RageUtil::Zero( state.m_bGameButtonLights );
+	RageUtil::Zero( state.m_bCoinCounter );
 	Set( &state );
 }
 

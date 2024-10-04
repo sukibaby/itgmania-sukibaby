@@ -43,9 +43,9 @@ if( SHARED_SELECTION ) { \
 
 ScreenSelectMaster::ScreenSelectMaster()
 {
-	ZERO( m_iChoice );
-	ZERO( m_bChosen );
-	ZERO( m_bDoubleChoice );
+	RageUtil::Zero( m_iChoice );
+	RageUtil::Zero( m_bChosen );
+	RageUtil::Zero( m_bDoubleChoice );
 }
 
 void ScreenSelectMaster::Init()

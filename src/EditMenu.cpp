@@ -130,7 +130,7 @@ void EditMenu::Load( const RString &sType )
 
 	m_SelectedRow = GetFirstRow();
 
-	ZERO( m_iSelection );
+	RageUtil::Zero( m_iSelection );
 
 	FOREACH_EditMenuRow( r )
 	{

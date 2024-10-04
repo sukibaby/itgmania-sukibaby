@@ -188,11 +188,11 @@ void SetupFormat( RageSurfaceFormat &fmt,
 	fmt.BytesPerPixel = BitsPerPixel/8;
 	if( fmt.BytesPerPixel == 1 )
 	{
-		ZERO( fmt.Mask );
-		ZERO( fmt.Shift );
+		RageUtil::Zero( fmt.Mask );
+		RageUtil::Zero( fmt.Shift );
 
 		// Loss for paletted textures is zero; the actual palette entries are 8-bit.
-		ZERO( fmt.Loss );
+		RageUtil::Zero( fmt.Loss );
 
 		fmt.palette = std::make_unique<RageSurfacePalette>();
 		fmt.palette->ncolors = 256;
