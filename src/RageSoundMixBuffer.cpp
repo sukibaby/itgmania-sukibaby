@@ -6,17 +6,19 @@
 #include <cstdint>
 #include <cstdlib>
 
-// When the buffer is extended, ensure the size is a multiple of 1024.
-constexpr uint_fast64_t ALIGNMENT = 1024;
-
 RageSoundMixBuffer::RageSoundMixBuffer()
 {
-	static const size_t initBufSize = ALIGNMENT * sizeof(float);
-	m_pMixbuf = static_cast<float*>(std::malloc(initBufSize));
-	m_iBufSize = ALIGNMENT;
+	m_pMixbuf = static_cast<float*>(std::malloc(BUF_SIZE * sizeof(float)));
+	if (m_pMixbuf == nullptr)
+	{
+		ASSERT_M(false, "Failed to allocate memory for the sound mixing buffer");
+	}
+	m_iBufSize = BUF_SIZE;
+	std::memset(m_pMixbuf, 0, m_iBufSize * sizeof(float));
 	m_iBufUsed = 0;
 	m_iOffset = 0;
 }
+
 
 RageSoundMixBuffer::~RageSoundMixBuffer()
 {
@@ -30,23 +32,22 @@ void RageSoundMixBuffer::SetWriteOffset( int iOffset )
 	m_iOffset = iOffset;
 }
 
-void RageSoundMixBuffer::Extend(unsigned iSamples) noexcept
+void RageSoundMixBuffer::Extend(unsigned iSamples)
 {
-	const uint_fast64_t realsize = static_cast<std::int_fast64_t>(iSamples) + m_iOffset; // minimum size to accomodate the new data
-	const uint_fast64_t newsize = ((realsize + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT; // find nearest multiple of 1024 at least as large as realsize
-
-	if (m_iBufSize < newsize)
+	const uint64_t realsize = static_cast<uint64_t>(iSamples) + static_cast<uint64_t>(m_iOffset);
+	if( m_iBufSize < realsize )
 	{
-		m_pMixbuf = static_cast<float*>(std::realloc(m_pMixbuf, newsize * sizeof(float)));
-		m_iBufSize = newsize;
+		m_pMixbuf = static_cast<float*>(std::realloc(m_pMixbuf, sizeof(float) * realsize));
+		if (m_pMixbuf == nullptr)
+		{
+			ASSERT_M(false, "Failed to re-allocate memory for the sound mixing buffer.");
+		}
+		m_iBufSize = realsize;
 	}
 
-	if (m_iBufUsed < realsize)
+	if( m_iBufUsed < realsize )
 	{
-		if (m_pMixbuf)
-		{
-			std::memset(m_pMixbuf + m_iBufUsed, 0, (realsize - m_iBufUsed) * sizeof(float));
-		}
+		std::memset(m_pMixbuf + m_iBufUsed, 0, (realsize - m_iBufUsed) * sizeof(float));
 		m_iBufUsed = realsize;
 	}
 }
