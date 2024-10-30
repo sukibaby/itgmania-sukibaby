@@ -14,25 +14,45 @@ public:
 	// See how many samples we can stuff into 2MB.
 	static constexpr size_t BUF_SIZE = 2 * 1024 * 1024 / sizeof(float);
 
-	// Mix the given buffer of samples.
-	void write( const float *pBuf, unsigned iSize, int iSourceStride = 1, int iDestStride = 1 );
-
-	// Extend the buffer as if write() was called with a buffer of silence.
-	void Extend( unsigned iSamples );
-
-	void read( int16_t *pBuf );
-	void read( float *pBuf );
-	void read_deinterlace( float **pBufs, int channels );
+	void write( const float *pBuf, unsigned iSize, int iSourceStride = 1, int iDestStride = 1 ) noexcept;
+	void Extend( unsigned iSamples ) noexcept;
+	void read_deinterlace( float **pBufs, int channels ) noexcept;
 	float *read() { return m_pMixbuf; }
 	unsigned size() const { return m_iBufUsed; }
-	void SetWriteOffset( int iOffset );
+
+	void SetWriteOffset(int iOffset) noexcept;
+	void read(std::int16_t *pBuf) noexcept;
+	void read(float *pBuf) noexcept;
 
 private:
 	float *m_pMixbuf;
-	uint64_t m_iBufSize; // actual allocated samples
-	uint64_t m_iBufUsed; // used samples
-	int m_iOffset;
+	std::int_fast64_t m_iBufSize; // actual allocated samples
+	std::int_fast64_t m_iBufUsed; // used samples
+	std::int_fast32_t m_iOffset;
 };
+
+inline void RageSoundMixBuffer::SetWriteOffset(int iOffset) noexcept
+{
+	m_iOffset = iOffset;
+}
+
+inline void RageSoundMixBuffer::read(std::int16_t *pBuf) noexcept
+{
+	constexpr int16_t MAX_INT16 = 32767;
+	for (unsigned iPos = 0; iPos < m_iBufUsed; ++iPos)
+	{
+		float iOut = m_pMixbuf[iPos];
+		iOut = std::max(-1.0f, std::min(iOut, 1.0f));
+		pBuf[iPos] = static_cast<int16_t>((iOut * MAX_INT16) + 0.5f);
+	}
+	m_iBufUsed = 0;
+}
+
+inline void RageSoundMixBuffer::read(float *pBuf) noexcept
+{
+	std::memcpy(pBuf, m_pMixbuf, m_iBufUsed * sizeof(float));
+	m_iBufUsed = 0;
+}
 
 #endif
 
