@@ -372,6 +372,7 @@ void ActorMultiVertex::SetVertsFromSplinesInternal(size_t num_splines, size_t of
 void ActorMultiVertex::SetVertsFromSplines()
 {
 	if(AMV_DestTweenState().vertices.empty()) { return; }
+	const auto drawMode = AMV_DestTweenState()._DrawMode; // cache this value to avoid repeated calls when switching
 	switch(AMV_DestTweenState()._DrawMode)
 	{
 		case DrawMode_Quads:
@@ -458,74 +459,41 @@ void ActorMultiVertex::UpdateAnimationState(bool force_update)
 	}
 	if(state_changed)
 	{
-
 		size_t first= dest.FirstToDraw;
 		size_t last= first+dest.GetSafeNumToDraw(dest._DrawMode, dest.NumToDraw);
-
-		switch(AMV_DestTweenState()._DrawMode)
-		{
-		case DrawMode_Quads:
-			for (size_t i = first; i < last; ++i)
-			{
-				const size_t quad_id = (i - first) / 4;
-				const size_t state_id = (_cur_state + qs[quad_id % qs.size()]) % _states.size();
-				const auto& rect = _states[state_id].rect;
-
-				switch ((i - first) % 4)
-		std::size_t first= dest.FirstToDraw;
-		std::size_t last= first+dest.GetSafeNumToDraw(dest._DrawMode, dest.NumToDraw);
-#define STATE_ID const std::size_t state_id= (_cur_state + qs[quad_id % qs.size()]) % _states.size();
 		switch(AMV_DestTweenState()._DrawMode)
 		{
 			case DrawMode_Quads:
-				for(std::size_t i= first; i < last; ++i)
-			}
-        [[fallthrough]];
-		case DrawMode_QuadStrip:
-			for (size_t i = first; i < last; ++i)
-			{
-				const size_t quad_id = (i - first) / 2;
-				const size_t state_id = (_cur_state + qs[quad_id % qs.size()]) % _states.size();
-				const auto& rect = _states[state_id].rect;
-
-				if ((i - first) % 2 == 0)
+				for(size_t i= first; i < last; ++i)
 				{
-					verts[i].t.x = rect.left;
-					verts[i].t.y = rect.top;
+					const size_t quad_id= (i-first)/4;
+					const size_t state_id = (_cur_state + qs[quad_id % qs.size()]) % _states.size();;
+					switch((i-first)%4)
+					{
+						case 0:
+							verts[i].t.x= _states[state_id].rect.left;
+							verts[i].t.y= _states[state_id].rect.top;
+							break;
+						case 1:
+							verts[i].t.x= _states[state_id].rect.right;
+							verts[i].t.y= _states[state_id].rect.top;
+							break;
+						case 2:
+							verts[i].t.x= _states[state_id].rect.right;
+							verts[i].t.y= _states[state_id].rect.bottom;
+							break;
+						case 3:
+							verts[i].t.x= _states[state_id].rect.left;
+							verts[i].t.y= _states[state_id].rect.bottom;
+							break;
+					}
 				}
-				else
-				{
-					verts[i].t.x = rect.left;
-					verts[i].t.y = rect.bottom;
-				}
-			}
-			break;
-		case DrawMode_Strip:
-		case DrawMode_Fan:
-			for (size_t i = first; i < last; ++i)
-			{
-				const size_t quad_id = (i - first);
-				const size_t state_id = (_cur_state + qs[quad_id % qs.size()]) % _states.size();
-				const auto& rect = _states[state_id].rect;
-
-				verts[i].t.x = rect.left;
-				verts[i].t.y = rect.top;
-			}
-			break;
-		case DrawMode_Triangles:
-			for (size_t i = first; i < last; ++i)
-			{
-				const size_t quad_id = (i - first) / 3;
-				const size_t state_id = (_cur_state + qs[quad_id % qs.size()]) % _states.size();
-				const auto& rect = _states[state_id].rect;
-
-				switch ((i - first) % 3)
 				break;
 			case DrawMode_QuadStrip:
-				for(std::size_t i= first; i < last; ++i)
+				for(size_t i= first; i < last; ++i)
 				{
-					const std::size_t quad_id= (i-first)/2;
-					STATE_ID;
+					const size_t quad_id= (i-first)/2;
+					const size_t state_id = (_cur_state + qs[quad_id % qs.size()]) % _states.size();;
 					switch((i-first)%2)
 					{
 						case 0:
@@ -541,19 +509,19 @@ void ActorMultiVertex::UpdateAnimationState(bool force_update)
 				break;
 			case DrawMode_Strip:
 			case DrawMode_Fan:
-				for(std::size_t i= first; i < last; ++i)
+				for(size_t i= first; i < last; ++i)
 				{
-					const std::size_t quad_id= (i-first);
-					STATE_ID;
+					const size_t quad_id= (i-first);
+					const size_t state_id = (_cur_state + qs[quad_id % qs.size()]) % _states.size();;
 					verts[i].t.x= _states[state_id].rect.left;
 					verts[i].t.y= _states[state_id].rect.top;
 				}
 				break;
 			case DrawMode_Triangles:
-				for(std::size_t i= first; i < last; ++i)
+				for(size_t i= first; i < last; ++i)
 				{
-					const std::size_t quad_id= (i-first)/3;
-					STATE_ID;
+					const size_t quad_id= (i-first)/3;
+					const size_t state_id = (_cur_state + qs[quad_id % qs.size()]) % _states.size();;
 					switch((i-first)%3)
 					{
 						case 0:
@@ -572,10 +540,10 @@ void ActorMultiVertex::UpdateAnimationState(bool force_update)
 				}
 				break;
 			case DrawMode_SymmetricQuadStrip:
-				for(std::size_t i= first; i < last; ++i)
+				for(size_t i= first; i < last; ++i)
 				{
-					const std::size_t quad_id= (i-first)/3;
-					STATE_ID;
+					const size_t quad_id= (i-first)/3;
+					const size_t state_id = (_cur_state + qs[quad_id % qs.size()]) % _states.size();;
 					switch((i-first)%3)
 					{
 						case 0:
@@ -594,7 +562,6 @@ void ActorMultiVertex::UpdateAnimationState(bool force_update)
 				break;
 		}
 	}
-#undef STATE_ID
 }
 
 void ActorMultiVertex::EnableAnimation(bool bEnable)
@@ -624,7 +591,7 @@ void ActorMultiVertex::Update(float fDelta)
 	UpdateAnimationState();
 	if(!skip_this_movie_update && _decode_movie)
 	{
-		_Texture->UpdateMovie(std::max(0.0f, time_passed));
+		_Texture->DecodeSeconds(std::max(0.0f, time_passed));
 	}
 }
 
