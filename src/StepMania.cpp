@@ -86,22 +86,21 @@ static Preference<bool> g_bAllowMultipleInstances( "AllowMultipleInstances", fal
 
 void StepMania::GetPreferredVideoModeParams( VideoModeParams &paramsOut )
 {
-	// resolution handling code that probably needs fixing
-	int iWidth = PREFSMAN->m_iDisplayWidth;
-	if( PREFSMAN->m_bWindowed )
+	// Always make the width an even number to avoid rounding errors.
+	int displayWidth = PREFSMAN->m_iDisplayWidth;
+	if (PREFSMAN->m_bWindowed)
 	{
-		//float fRatio = PREFSMAN->m_iDisplayHeight;
-		//iWidth = PREFSMAN->m_iDisplayHeight * fRatio;
-		iWidth = std::ceil(PREFSMAN->m_iDisplayHeight * PREFSMAN->m_fDisplayAspectRatio);
-		// ceil causes the width to come out odd when it shouldn't.
-		// 576 * 1.7778 = 1024.0128, which is rounded to 1025. -Kyz
-		iWidth-= iWidth % 2;
+		displayWidth = static_cast<int>(std::round(PREFSMAN->m_iDisplayHeight * PREFSMAN->m_fDisplayAspectRatio));
+		if (displayWidth % 2 != 0)
+		{
+			displayWidth += 1;
+		}
 	}
 
 	paramsOut = VideoModeParams(
 		PREFSMAN->m_bWindowed || PREFSMAN->m_bFullscreenIsBorderlessWindow,
 		PREFSMAN->m_sDisplayId,
-		iWidth,
+		displayWidth,
 		PREFSMAN->m_iDisplayHeight,
 		PREFSMAN->m_iDisplayColorDepth,
 		PREFSMAN->m_iRefreshRate,
