@@ -20,53 +20,58 @@ void NotesLoader::GetMainAndSubTitlesFromFullTitle( const RString &sFullTitle, R
 	{
 		size_t iBeginIndex = sFullTitle.find( sLeftSeps[i] );
 		if( iBeginIndex == std::string::npos )
+		{
 			continue;
-		sMainTitleOut = sFullTitle.Left( (int) iBeginIndex );
-		sSubTitleOut = sFullTitle.substr( iBeginIndex+1, sFullTitle.size()-iBeginIndex+1 );
+		}
+		sMainTitleOut = sFullTitle.Left(static_cast<int>(iBeginIndex));
+		sSubTitleOut = sFullTitle.substr(iBeginIndex + 1, sFullTitle.size() - iBeginIndex - 1);
 		return;
 	}
 	sMainTitleOut = sFullTitle;
 	sSubTitleOut = "";
-};
+}
 
 bool NotesLoader::LoadFromDir( const RString &sPath, Song &out, std::set<RString> &BlacklistedImages, bool load_autosave )
 {
 	std::vector<RString> list;
-
 	BlacklistedImages.clear();
-	SSCLoader loaderSSC;
-	loaderSSC.GetApplicableFiles( sPath, list, load_autosave );
-	if( !list.empty() )
-	{
-		if( !loaderSSC.LoadFromDir( sPath, out, load_autosave ) )
-		{ return false; }
-		return true;
+
+	struct Loader {
+		SMLoader* loader;
+		bool (SMLoader::* loadFunc)(const RString&, Song&, bool);
+		void (SMLoader::* getFilesFunc)(const RString&, std::vector<RString>&, bool);
+	};
+
+	Loader loaders[] = {
+		{ new SSCLoader(), &SMLoader::LoadFromDir, &SMLoader::GetApplicableFiles },
+		{ new SMALoader(), &SMLoader::LoadFromDir, &SMLoader::GetApplicableFiles },
+		{ new SMLoader(".sm"), &SMLoader::LoadFromDir, &SMLoader::GetApplicableFiles },
+		{ nullptr, nullptr, nullptr }
+	};
+
+	for (int i = 0; loaders[i].loader != nullptr; ++i) {
+		(loaders[i].loader->*loaders[i].getFilesFunc)(sPath, list, load_autosave);
+		if (!list.empty()) {
+			bool result = (loaders[i].loader->*loaders[i].loadFunc)(sPath, out, load_autosave);
+			delete loaders[i].loader;
+			return result;
+		}
+		delete loaders[i].loader;
 	}
-	SMALoader loaderSMA;
-	loaderSMA.GetApplicableFiles( sPath, list );
-	if (!list.empty() )
-		return loaderSMA.LoadFromDir( sPath, out );
-	SMLoader loaderSM;
-	loaderSM.GetApplicableFiles( sPath, list );
-	if (!list.empty() )
-		return loaderSM.LoadFromDir( sPath, out );
-	DWILoader::GetApplicableFiles( sPath, list );
-	if( !list.empty() )
-		return DWILoader::LoadFromDir( sPath, out, BlacklistedImages );
-	BMSLoader::GetApplicableFiles( sPath, list );
-	if( !list.empty() )
-		return BMSLoader::LoadFromDir( sPath, out );
-	/*
-	PMSLoader::GetApplicableFiles( sPath, list );
-	if( !list.empty() )
-		return PMSLoader::LoadFromDir( sPath, out );
-	*/
-	KSFLoader::GetApplicableFiles( sPath, list );
-	if( !list.empty() )
-		return KSFLoader::LoadFromDir( sPath, out );
+
+	// DWI and KSF loaders are not derived from SMLoader, so they have to be handled separately.
+	DWILoader::GetApplicableFiles(sPath, list);
+	if (!list.empty()) {
+		return DWILoader::LoadFromDir(sPath, out, BlacklistedImages);
+	}
+
+	KSFLoader::GetApplicableFiles(sPath, list);
+	if (!list.empty()) {
+		return KSFLoader::LoadFromDir(sPath, out);
+	}
+
 	return false;
 }
-
 
 /*
  * (c) 2001-2004,2007 Chris Danford, Glenn Maynard, Steve Checkoway
