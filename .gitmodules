@@ -41,3 +41,6 @@
 	path = extern/libusb
 	url = https://github.com/libusb/libusb-cmake.git
 	shallow = true
+[submodule "extern/mpg123"]
+	path = extern/mpg123
+	url = https://github.com/madebr/mpg123
