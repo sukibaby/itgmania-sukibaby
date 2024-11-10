@@ -328,7 +328,7 @@ if(WITH_MINIMAID)
   include(../extern/CMakeProject-mmmagic.cmake)
 endif()
 
-list(APPEND SMDATA_LINK_LIB "mad"
+list(APPEND SMDATA_LINK_LIB "pcre-awa"
                             "pcre"
                             "glew"
                             "tomcrypt"
