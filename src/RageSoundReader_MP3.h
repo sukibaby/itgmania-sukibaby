@@ -16,8 +16,8 @@ public:
 	bool SetProperty(const RString& sProperty, float fValue); // done (?)
 
 	/* still working on it */
-	int GetLength() const { return GetLengthConst(false); }
-	int GetLength_Fast() const { return GetLengthConst(true); }
+	int GetLength() const;
+	int GetLength_Fast() const { return GetLength(); } // this should just be an alias of GetLength()
 	int SetPosition( int iSample );
 	unsigned GetNumChannels() const { return Channels; }
 	int GetSampleRate() const { return SampleRate; }

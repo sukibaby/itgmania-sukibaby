@@ -164,3 +164,42 @@ void RageSoundReader_MP3::Close()
 		m_pFile = nullptr;
 	}
 }
+
+int RageSoundReader_MP3::GetLength() const
+{
+	if (mh == nullptr)
+	{
+		SetError("mpg123 handle is not initialized");
+		return ERROR;
+	}
+
+	off_t length = mpg123_length(mh);
+	if (length == MPG123_ERR)
+	{
+		SetError("Error getting length of MP3 file");
+		return ERROR;
+	}
+
+	// Convert length from samples to milliseconds
+	return static_cast<int>((length * 1000) / SampleRate);
+}
+
+int RageSoundReader_MP3::SetPosition(int iFrame)
+{
+	if (mh == nullptr)
+	{
+		SetError("mpg123 handle is not initialized");
+		return ERROR;
+	}
+
+	// Seek to the specified frame
+	off_t result = mpg123_seek(mh, iFrame, SEEK_SET);
+	if (result < 0)
+	{
+		SetError("Error seeking to the specified frame");
+		return ERROR;
+	}
+
+	return static_cast<int>(result);
+}
+
