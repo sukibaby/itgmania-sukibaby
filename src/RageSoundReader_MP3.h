@@ -1,6 +1,14 @@
 #ifndef RAGE_SOUND_READER_MP3_H
 #define RAGE_SOUND_READER_MP3_H
 
+extern "C" {
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libswresample/swresample.h>
+#include <libavutil/avutil.h>
+#include <libavutil/opt.h>
+}
+
 #include "RageSoundReader_FileReader.h"
 #include "RageFile.h"
 
