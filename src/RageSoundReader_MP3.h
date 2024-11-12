@@ -14,12 +14,13 @@ public:
 	int Read(float* pBuf, int iFrames);  // done
 	int GetNextSourceFrame() const; // done
 	bool SetProperty(const RString& sProperty, float fValue); // done (?)
-
-	/* still working on it */
 	int GetLength() const;
 	int GetLength_Fast() const { return GetLength(); } // this should just be an alias of GetLength()
-	int SetPosition( int iSample );
-	unsigned GetNumChannels() const { return Channels; }
+	int SetPosition(int iSample);
+
+	/* still working on it */
+
+	unsigned GetNumChannels() const;
 	int GetSampleRate() const { return SampleRate; }
 
 

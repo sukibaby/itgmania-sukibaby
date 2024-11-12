@@ -203,3 +203,43 @@ int RageSoundReader_MP3::SetPosition(int iFrame)
 	return static_cast<int>(result);
 }
 
+unsigned RageSoundReader_MP3::GetNumChannels() const
+{
+	if (mh == nullptr)
+	{
+		SetError("mpg123 handle is not initialized");
+		return 0;
+	}
+
+	long rate;
+	int channels, encoding;
+	if (mpg123_getformat(mh, &rate, &channels, &encoding) != MPG123_OK)
+	{
+		SetError("Error getting format from mpg123 handle");
+		return 0;
+	}
+
+	return static_cast<unsigned>(channels);
+}
+
+int RageSoundReader_MP3::GetSampleRate() const
+{
+	if (mh == nullptr)
+	{
+		SetError("mpg123 handle is not initialized");
+		return 0;
+	}
+
+	long rate;
+	int channels, encoding;
+	if (mpg123_getformat(mh, &rate, &channels, &encoding) != MPG123_OK)
+	{
+		SetError("Error getting format from mpg123 handle");
+		return 0;
+	}
+
+	return static_cast<int>(rate);
+}
+
+
+// SUKIBABY!!!!
