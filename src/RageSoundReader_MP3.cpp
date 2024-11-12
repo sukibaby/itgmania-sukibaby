@@ -33,8 +33,6 @@ RageSoundReader_MP3::~RageSoundReader_MP3()
 	}
 }
 
-#include "mpg123.h"
-
 RageSoundReader_FileReader::OpenResult RageSoundReader_MP3::Open(RageFileBasic* pFile)
 {
 	m_pFile = pFile;

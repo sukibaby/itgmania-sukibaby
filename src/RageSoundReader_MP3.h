@@ -27,8 +27,6 @@ public:
 	/* ughhhh!  */
 	RageSoundReader_MP3();
 	~RageSoundReader_MP3();
-	RageSoundReader_MP3( const RageSoundReader_MP3 & ); /* not defined; don't use */
-	RageSoundReader_MP3 *Copy() const;
 
 private:
 };
