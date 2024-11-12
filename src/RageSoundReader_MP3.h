@@ -4,32 +4,31 @@
 #include "RageSoundReader_FileReader.h"
 #include "RageFile.h"
 
-class RageSoundReader_MP3: public RageSoundReader_FileReader
-{
+class RageSoundReader_MP3 : public RageSoundReader_FileReader {
 public:
-
-	/* done */
-	OpenResult Open( RageFileBasic *pFile );
-	void Close(); // done
-	int Read(float* pBuf, int iFrames);  // done
-	int GetNextSourceFrame() const; // done
-	bool SetProperty(const RString& sProperty, float fValue); // done (?)
-	int GetLength() const;
-	int GetLength_Fast() const { return GetLength(); } // this should just be an alias of GetLength()
-	int SetPosition(int iSample);
-
-	/* still working on it */
-
-	unsigned GetNumChannels() const;
-	int GetSampleRate() const { return SampleRate; }
-
-
-	/* ughhhh!  */
 	RageSoundReader_MP3();
 	~RageSoundReader_MP3();
 
+	OpenResult Open(RageFileBasic* pFile) override;
+	void Close() override;
+	int Read(float* buf, int iFrames) override;
+	int GetNextSourceFrame() const override;
+	bool SetProperty(const RString& sProperty, float fValue) override;
+	int GetLength() const override;
+	int SetPosition(int iFrame) override;
+	unsigned GetNumChannels() const override;
+	int GetSampleRate() const override;
+
 private:
+	AVFormatContext* formatContext;
+	AVCodecContext* codecContext;
+	AVFrame* frame;
+	AVPacket* packet;
+	SwrContext* swrContext;
+	int audioStreamIndex;
+	int64_t nextPts;
 };
+
 
 #endif
 

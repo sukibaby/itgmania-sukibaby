@@ -1,5 +1,3 @@
-/* MAD is available from: http://www.underbit.com/products/mad/ */
-
 #include "global.h"
 #include "RageSoundReader_MP3.h"
 #include "RageLog.h"
@@ -10,233 +8,199 @@
 #include <cstdio>
 #include <map>
 
-#include "mpg123.h"
-
-RageSoundReader_MP3::RageSoundReader_MP3()
-	: mh(nullptr), m_pFile(nullptr)
-{
+extern "C" {
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libavutil/opt.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/samplefmt.h>
+#include <libswresample/swresample.h>
 }
 
-RageSoundReader_MP3::~RageSoundReader_MP3()
-{
-	if (mh != nullptr)
-	{
-		mpg123_close(mh);
-		mpg123_delete(mh);
-		mh = nullptr;
+RageSoundReader_MP3::RageSoundReader_MP3()
+	: formatContext(nullptr), codecContext(nullptr), frame(nullptr), packet(nullptr), swrContext(nullptr), audioStreamIndex(-1), nextPts(0) {
+	av_register_all();
+}
+
+RageSoundReader_MP3::~RageSoundReader_MP3() {
+	Close();
+}
+
+RageSoundReader_FileReader::OpenResult RageSoundReader_MP3::Open(RageFileBasic* pFile) {
+	m_pFile = pFile;
+
+	// Open the file using FFmpeg
+	if (avformat_open_input(&formatContext, m_pFile->GetDisplayPath().c_str(), nullptr, nullptr) < 0) {
+		SetError("Failed to open MP3 file with FFmpeg");
+		return OPEN_UNKNOWN_FILE_FORMAT;
 	}
 
-	if (m_pFile != nullptr)
-	{
+	// Retrieve stream information
+	if (avformat_find_stream_info(formatContext, nullptr) < 0) {
+		SetError("Failed to find stream information");
+		return OPEN_UNKNOWN_FILE_FORMAT;
+	}
+
+	// Find the audio stream
+	audioStreamIndex = av_find_best_stream(formatContext, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
+	if (audioStreamIndex < 0) {
+		SetError("Failed to find audio stream");
+		return OPEN_UNKNOWN_FILE_FORMAT;
+	}
+
+	// Get the codec context
+	AVStream* audioStream = formatContext->streams[audioStreamIndex];
+	AVCodec* codec = avcodec_find_decoder(audioStream->codecpar->codec_id);
+	if (!codec) {
+		SetError("Failed to find codec");
+		return OPEN_UNKNOWN_FILE_FORMAT;
+	}
+
+	codecContext = avcodec_alloc_context3(codec);
+	if (avcodec_parameters_to_context(codecContext, audioStream->codecpar) < 0) {
+		SetError("Failed to copy codec parameters to codec context");
+		return OPEN_UNKNOWN_FILE_FORMAT;
+	}
+
+	if (avcodec_open2(codecContext, codec, nullptr) < 0) {
+		SetError("Failed to open codec");
+		return OPEN_UNKNOWN_FILE_FORMAT;
+	}
+
+	// Initialize the resampler
+	swrContext = swr_alloc_set_opts(nullptr,
+		av_get_default_channel_layout(2),
+		AV_SAMPLE_FMT_FLT,
+		codecContext->sample_rate,
+		av_get_default_channel_layout(codecContext->channels),
+		codecContext->sample_fmt,
+		codecContext->sample_rate,
+		0, nullptr);
+	if (!swrContext || swr_init(swrContext) < 0) {
+		SetError("Failed to initialize resampler");
+		return OPEN_UNKNOWN_FILE_FORMAT;
+	}
+
+	frame = av_frame_alloc();
+	packet = av_packet_alloc();
+
+	SampleRate = codecContext->sample_rate;
+	Channels = 2; // We are converting to stereo
+
+	return OPEN_OK;
+}
+
+void RageSoundReader_MP3::Close() {
+	if (packet) {
+		av_packet_free(&packet);
+		packet = nullptr;
+	}
+	if (frame) {
+		av_frame_free(&frame);
+		frame = nullptr;
+	}
+	if (swrContext) {
+		swr_free(&swrContext);
+		swrContext = nullptr;
+	}
+	if (codecContext) {
+		avcodec_free_context(&codecContext);
+		codecContext = nullptr;
+	}
+	if (formatContext) {
+		avformat_close_input(&formatContext);
+		formatContext = nullptr;
+	}
+	if (m_pFile) {
 		m_pFile->Close();
 		m_pFile = nullptr;
 	}
 }
 
-RageSoundReader_FileReader::OpenResult RageSoundReader_MP3::Open(RageFileBasic* pFile)
-{
-	m_pFile = pFile;
-
-	// Initialize mpg123 library
-	if (mpg123_init() != MPG123_OK) {
-		SetError("Failed to initialize mpg123");
-		return OPEN_UNKNOWN_FILE_FORMAT;
-	}
-
-	// Create a new mpg123 handle
-	mpg123_handle* mh = mpg123_new(NULL, NULL);
-	if (mh == NULL) {
-		SetError("Failed to create mpg123 handle");
-		return OPEN_UNKNOWN_FILE_FORMAT;
-	}
-
-	// Open the file with mpg123
-	if (mpg123_open_handle(mh, m_pFile) != MPG123_OK) {
-		SetError("Failed to open MP3 file with mpg123");
-		mpg123_delete(mh);
-		return OPEN_UNKNOWN_FILE_FORMAT;
-	}
-
-	// Read and decode the first frame to get header info
-	unsigned char* audio = nullptr;
-	size_t bytes = 0;
-	int err = mpg123_read(mh, audio, 0, &bytes);
-	if (err != MPG123_OK && err != MPG123_NEW_FORMAT) {
-		SetError("Failed to read any data at all");
-		mpg123_close(mh);
-		mpg123_delete(mh);
-		return OPEN_UNKNOWN_FILE_FORMAT;
-	}
-
-	// Get the format information
-	long rate;
-	int channels, encoding;
-	if (mpg123_getformat(mh, &rate, &channels, &encoding) != MPG123_OK) {
-		SetError("Failed to get format information");
-		mpg123_close(mh);
-		mpg123_delete(mh);
-		return OPEN_UNKNOWN_FILE_FORMAT;
-	}
-
-	// Store the sample rate and number of channels
-	SampleRate = rate;
-	this->Channels = channels;
-
-	// Estimate the length of the file
-	off_t length = mpg123_length(mh);
-	if (length != MPG123_ERR) {
-		this->Length = static_cast<int>((length * 1000) / rate); // Convert to milliseconds
-	}
-	else {
-		this->Length = -1; // Unknown length
-	}
-
-	// Clean up
-	mpg123_close(mh);
-	mpg123_delete(mh);
-
-	return OPEN_OK;
-}
-
-int RageSoundReader_MP3::Read(float* buf, int iFrames)
-{
+int RageSoundReader_MP3::Read(float* buf, int iFrames) {
 	int iFramesWritten = 0;
-	size_t bytesToRead = iFrames * GetNumChannels() * sizeof(float);
-	unsigned char* audioBuffer = reinterpret_cast<unsigned char*>(buf);
-	size_t bytesRead = 0;
+	int bytesPerSample = av_get_bytes_per_sample(AV_SAMPLE_FMT_FLT);
+	int bufferSize = iFrames * Channels * bytesPerSample;
+	uint8_t* outputBuffer = reinterpret_cast<uint8_t*>(buf);
 
-	while (iFrames > 0)
-	{
-		int err = mpg123_read(mh, audioBuffer, bytesToRead, &bytesRead);
-		if (err == MPG123_DONE)
-		{
+	while (iFramesWritten < iFrames) {
+		if (av_read_frame(formatContext, packet) < 0) {
 			return END_OF_FILE;
 		}
-		else if (err != MPG123_OK)
-		{
-			SetError("Error reading MP3 data");
-			return ERROR;
+
+		if (packet->stream_index == audioStreamIndex) {
+			if (avcodec_send_packet(codecContext, packet) < 0) {
+				SetError("Error sending packet to decoder");
+				return ERROR;
+			}
+
+			while (avcodec_receive_frame(codecContext, frame) == 0) {
+				int outputSamples = swr_convert(swrContext, &outputBuffer, bufferSize, (const uint8_t**)frame->data, frame->nb_samples);
+				if (outputSamples < 0) {
+					SetError("Error converting samples");
+					return ERROR;
+				}
+
+				int framesRead = outputSamples / Channels;
+				iFramesWritten += framesRead;
+				outputBuffer += outputSamples * bytesPerSample;
+				bufferSize -= outputSamples * bytesPerSample;
+			}
 		}
 
-		int samplesRead = bytesRead / sizeof(float);
-		int framesRead = samplesRead / GetNumChannels();
-
-		buf += samplesRead;
-		iFrames -= framesRead;
-		iFramesWritten += framesRead;
-		audioBuffer += bytesRead;
-		bytesToRead -= bytesRead;
+		av_packet_unref(packet);
 	}
 
 	return iFramesWritten;
 }
 
-bool RageSoundReader_MP3::SetProperty( const RString &sProperty, float fValue )
-{
-	return RageSoundReader_FileReader::SetProperty( sProperty, fValue );
+int RageSoundReader_MP3::GetNextSourceFrame() const {
+	return static_cast<int>(nextPts);
 }
 
-int RageSoundReader_MP3::GetNextSourceFrame() const
-{
-	off_t frameOffset = mpg123_tellframe(mh);
-	if (frameOffset < 0)
-	{
-		SetError("Error getting current frame position");
-		return ERROR;
-	}
-	return static_cast<int>(frameOffset);
+bool RageSoundReader_MP3::SetProperty(const RString& sProperty, float fValue) {
+	return RageSoundReader_FileReader::SetProperty(sProperty, fValue);
 }
 
-void RageSoundReader_MP3::Close()
-{
-	if (mh != nullptr)
-	{
-		mpg123_close(mh);
-		mpg123_delete(mh);
-		mh = nullptr;
-	}
-
-	if (m_pFile != nullptr)
-	{
-		m_pFile->Close();
-		m_pFile = nullptr;
-	}
-}
-
-int RageSoundReader_MP3::GetLength() const
-{
-	if (mh == nullptr)
-	{
-		SetError("mpg123 handle is not initialized");
+int RageSoundReader_MP3::GetLength() const {
+	if (!formatContext) {
+		SetError("Format context is not initialized");
 		return ERROR;
 	}
 
-	off_t length = mpg123_length(mh);
-	if (length == MPG123_ERR)
-	{
+	int64_t duration = formatContext->duration;
+	if (duration == AV_NOPTS_VALUE) {
 		SetError("Error getting length of MP3 file");
 		return ERROR;
 	}
 
-	// Convert length from samples to milliseconds
-	return static_cast<int>((length * 1000) / SampleRate);
+	return static_cast<int>(duration / (AV_TIME_BASE / 1000)); // Convert to milliseconds
 }
 
-int RageSoundReader_MP3::SetPosition(int iFrame)
-{
-	if (mh == nullptr)
-	{
-		SetError("mpg123 handle is not initialized");
+int RageSoundReader_MP3::SetPosition(int iFrame) {
+	if (!formatContext) {
+		SetError("Format context is not initialized");
 		return ERROR;
 	}
 
-	// Seek to the specified frame
-	off_t result = mpg123_seek(mh, iFrame, SEEK_SET);
-	if (result < 0)
-	{
+	int64_t timestamp = av_rescale_q(iFrame, { 1, SampleRate }, formatContext->streams[audioStreamIndex]->time_base);
+	if (av_seek_frame(formatContext, audioStreamIndex, timestamp, AVSEEK_FLAG_BACKWARD) < 0) {
 		SetError("Error seeking to the specified frame");
 		return ERROR;
 	}
 
-	return static_cast<int>(result);
+	avcodec_flush_buffers(codecContext);
+	nextPts = iFrame;
+
+	return static_cast<int>(timestamp);
 }
 
-unsigned RageSoundReader_MP3::GetNumChannels() const
-{
-	if (mh == nullptr)
-	{
-		SetError("mpg123 handle is not initialized");
-		return 0;
-	}
-
-	long rate;
-	int channels, encoding;
-	if (mpg123_getformat(mh, &rate, &channels, &encoding) != MPG123_OK)
-	{
-		SetError("Error getting format from mpg123 handle");
-		return 0;
-	}
-
-	return static_cast<unsigned>(channels);
+unsigned RageSoundReader_MP3::GetNumChannels() const {
+	return Channels;
 }
 
-int RageSoundReader_MP3::GetSampleRate() const
-{
-	if (mh == nullptr)
-	{
-		SetError("mpg123 handle is not initialized");
-		return 0;
-	}
-
-	long rate;
-	int channels, encoding;
-	if (mpg123_getformat(mh, &rate, &channels, &encoding) != MPG123_OK)
-	{
-		SetError("Error getting format from mpg123 handle");
-		return 0;
-	}
-
-	return static_cast<int>(rate);
+int RageSoundReader_MP3::GetSampleRate() const {
+	return SampleRate;
 }
 
 
