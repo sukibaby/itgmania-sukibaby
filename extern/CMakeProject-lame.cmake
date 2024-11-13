@@ -24,7 +24,6 @@ set(LAME_SRC
 # Specify the include files for the LAME library
 set(LAME_INCLUDE
   "lame-3.100/include/lame.h"
-  "lame-3.100/include/lame_export.h"
 )
 
 # Group source and header files
