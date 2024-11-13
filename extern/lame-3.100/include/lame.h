@@ -24,9 +24,6 @@
 #ifndef LAME_LAME_H
 #define LAME_LAME_H
 
-// sukibaby i added this cstdint
-#include <cstdint>
-
 /* for size_t typedef */
 #include <stddef.h>
 /* for va_list typedef */
@@ -35,6 +32,8 @@
 #include <stdio.h>
 
 #if defined(__cplusplus)
+#include <cstddef>
+#include <cstdint>
 extern "C" {
 #endif
 
