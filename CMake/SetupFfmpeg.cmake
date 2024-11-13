@@ -27,6 +27,7 @@ list(APPEND FFMPEG_CONFIGURE
             "--enable-pthreads"
             "--enable-static"
             "--enable-zlib"
+            "--enable-libmp3lame"
             "--prefix=/")
 
 if(CMAKE_POSITION_INDEPENDENT_CODE)

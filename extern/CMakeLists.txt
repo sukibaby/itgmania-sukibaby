@@ -12,6 +12,7 @@ include(CMakeProject-tommath.cmake)
 include(CMakeProject-png.cmake)
 include(CMakeProject-ixwebsocket.cmake)
 include(CMakeProject-miniz.cmake)
+include(CMakeProject-lame.cmake)
 
 # External projects
 include(CMakeProject-libusb.cmake)

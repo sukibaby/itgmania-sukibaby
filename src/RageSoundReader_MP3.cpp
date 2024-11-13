@@ -19,7 +19,6 @@ extern "C" {
 
 RageSoundReader_MP3::RageSoundReader_MP3()
 	: formatContext(nullptr), codecContext(nullptr), frame(nullptr), packet(nullptr), swrContext(nullptr), audioStreamIndex(-1), nextPts(0) {
-	av_register_all();
 }
 
 RageSoundReader_MP3::~RageSoundReader_MP3() {
@@ -50,7 +49,7 @@ RageSoundReader_FileReader::OpenResult RageSoundReader_MP3::Open(RageFileBasic* 
 
 	// Get the codec context
 	AVStream* audioStream = formatContext->streams[audioStreamIndex];
-	AVCodec* codec = avcodec_find_decoder(audioStream->codecpar->codec_id);
+	const AVCodec* codec = avcodec_find_decoder(audioStream->codecpar->codec_id);
 	if (!codec) {
 		SetError("Failed to find codec");
 		return OPEN_UNKNOWN_FILE_FORMAT;
@@ -68,15 +67,20 @@ RageSoundReader_FileReader::OpenResult RageSoundReader_MP3::Open(RageFileBasic* 
 	}
 
 	// Initialize the resampler
-	swrContext = swr_alloc_set_opts(nullptr,
-		av_get_default_channel_layout(2),
-		AV_SAMPLE_FMT_FLT,
-		codecContext->sample_rate,
-		av_get_default_channel_layout(codecContext->channels),
-		codecContext->sample_fmt,
-		codecContext->sample_rate,
-		0, nullptr);
-	if (!swrContext || swr_init(swrContext) < 0) {
+	swrContext = swr_alloc();
+	if (!swrContext) {
+		SetError("Failed to allocate resampler context");
+		return OPEN_UNKNOWN_FILE_FORMAT;
+	}
+
+	av_opt_set_int(swrContext, "in_channel_layout", codecContext->channel_layout, 0);
+	av_opt_set_int(swrContext, "in_sample_rate", codecContext->sample_rate, 0);
+	av_opt_set_sample_fmt(swrContext, "in_sample_fmt", codecContext->sample_fmt, 0);
+	av_opt_set_int(swrContext, "out_channel_layout", AV_CH_LAYOUT_STEREO, 0);
+	av_opt_set_int(swrContext, "out_sample_rate", codecContext->sample_rate, 0);
+	av_opt_set_sample_fmt(swrContext, "out_sample_fmt", AV_SAMPLE_FMT_FLT, 0);
+
+	if (swr_init(swrContext) < 0) {
 		SetError("Failed to initialize resampler");
 		return OPEN_UNKNOWN_FILE_FORMAT;
 	}
@@ -112,7 +116,7 @@ void RageSoundReader_MP3::Close() {
 		formatContext = nullptr;
 	}
 	if (m_pFile) {
-		m_pFile->Close();
+		//m_pFile->Close();
 		m_pFile = nullptr;
 	}
 }
@@ -183,25 +187,20 @@ int RageSoundReader_MP3::SetPosition(int iFrame) {
 		return ERROR;
 	}
 
+	// Convert the frame position to a timestamp
 	int64_t timestamp = av_rescale_q(iFrame, { 1, SampleRate }, formatContext->streams[audioStreamIndex]->time_base);
+
+	// Seek to the specified frame
 	if (av_seek_frame(formatContext, audioStreamIndex, timestamp, AVSEEK_FLAG_BACKWARD) < 0) {
 		SetError("Error seeking to the specified frame");
 		return ERROR;
 	}
 
+	// Flush the codec context to clear any buffered data
 	avcodec_flush_buffers(codecContext);
+
+	// Reset the nextPts to the new position
 	nextPts = iFrame;
 
-	return static_cast<int>(timestamp);
+	return 0; // Return 0 to indicate success
 }
-
-unsigned RageSoundReader_MP3::GetNumChannels() const {
-	return Channels;
-}
-
-int RageSoundReader_MP3::GetSampleRate() const {
-	return SampleRate;
-}
-
-
-// SUKIBABY!!!!
