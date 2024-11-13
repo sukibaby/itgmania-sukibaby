@@ -20,7 +20,6 @@ list(APPEND FFMPEG_CONFIGURE
             "--disable-network"
             "--disable-postproc"
             "--disable-programs"
-            "--disable-swresample"
             "--disable-vaapi"
             "--disable-bzlib"
             "--enable-gpl"
