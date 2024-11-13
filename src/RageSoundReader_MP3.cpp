@@ -14,11 +14,11 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/samplefmt.h>
-#include <libswresample/swresample.h>
+//#include <libswresample/swresample.h>
 }
 
 RageSoundReader_MP3::RageSoundReader_MP3()
-	: formatContext(nullptr), codecContext(nullptr), frame(nullptr), packet(nullptr), swrContext(nullptr), audioStreamIndex(-1), nextPts(0) {
+	: formatContext(nullptr), codecContext(nullptr), frame(nullptr), packet(nullptr), audioStreamIndex(-1), nextPts(0) {
 }
 
 RageSoundReader_MP3::~RageSoundReader_MP3() {
@@ -66,24 +66,24 @@ RageSoundReader_FileReader::OpenResult RageSoundReader_MP3::Open(RageFileBasic* 
 		return OPEN_UNKNOWN_FILE_FORMAT;
 	}
 
-	// Initialize the resampler
-	swrContext = swr_alloc();
-	if (!swrContext) {
-		SetError("Failed to allocate resampler context");
-		return OPEN_UNKNOWN_FILE_FORMAT;
-	}
+	//// Initialize the resampler
+	//swrContext = swr_alloc();
+	//if (!swrContext) {
+	//	SetError("Failed to allocate resampler context");
+	//	return OPEN_UNKNOWN_FILE_FORMAT;
+	//}
 
-	av_opt_set_int(swrContext, "in_channel_layout", codecContext->channel_layout, 0);
-	av_opt_set_int(swrContext, "in_sample_rate", codecContext->sample_rate, 0);
-	av_opt_set_sample_fmt(swrContext, "in_sample_fmt", codecContext->sample_fmt, 0);
-	av_opt_set_int(swrContext, "out_channel_layout", AV_CH_LAYOUT_STEREO, 0);
-	av_opt_set_int(swrContext, "out_sample_rate", codecContext->sample_rate, 0);
-	av_opt_set_sample_fmt(swrContext, "out_sample_fmt", AV_SAMPLE_FMT_FLT, 0);
+	//av_opt_set_int(swrContext, "in_channel_layout", codecContext->channel_layout, 0);
+	//av_opt_set_int(swrContext, "in_sample_rate", codecContext->sample_rate, 0);
+	//av_opt_set_sample_fmt(swrContext, "in_sample_fmt", codecContext->sample_fmt, 0);
+	//av_opt_set_int(swrContext, "out_channel_layout", AV_CH_LAYOUT_STEREO, 0);
+	//av_opt_set_int(swrContext, "out_sample_rate", codecContext->sample_rate, 0);
+	//av_opt_set_sample_fmt(swrContext, "out_sample_fmt", AV_SAMPLE_FMT_FLT, 0);
 
-	if (swr_init(swrContext) < 0) {
-		SetError("Failed to initialize resampler");
-		return OPEN_UNKNOWN_FILE_FORMAT;
-	}
+	//if (swr_init(swrContext) < 0) {
+	//	SetError("Failed to initialize resampler");
+	//	return OPEN_UNKNOWN_FILE_FORMAT;
+	//}
 
 	frame = av_frame_alloc();
 	packet = av_packet_alloc();
@@ -95,30 +95,30 @@ RageSoundReader_FileReader::OpenResult RageSoundReader_MP3::Open(RageFileBasic* 
 }
 
 void RageSoundReader_MP3::Close() {
-	if (packet) {
-		av_packet_free(&packet);
-		packet = nullptr;
-	}
-	if (frame) {
-		av_frame_free(&frame);
-		frame = nullptr;
-	}
-	if (swrContext) {
-		swr_free(&swrContext);
-		swrContext = nullptr;
-	}
-	if (codecContext) {
-		avcodec_free_context(&codecContext);
-		codecContext = nullptr;
-	}
-	if (formatContext) {
-		avformat_close_input(&formatContext);
-		formatContext = nullptr;
-	}
-	if (m_pFile) {
-		//m_pFile->Close();
-		m_pFile = nullptr;
-	}
+	//if (packet) {
+	//	av_packet_free(&packet);
+	//	packet = nullptr;
+	//}
+	//if (frame) {
+	//	av_frame_free(&frame);
+	//	frame = nullptr;
+	//}
+	////if (swrContext) {
+	////	swr_free(&swrContext);
+	////	swrContext = nullptr;
+	////}
+	//if (codecContext) {
+	//	avcodec_free_context(&codecContext);
+	//	codecContext = nullptr;
+	//}
+	//if (formatContext) {
+	//	avformat_close_input(&formatContext);
+	//	formatContext = nullptr;
+	//}
+	//if (m_pFile) {
+	//	//m_pFile->Close();
+	//	m_pFile = nullptr;
+	//}
 }
 
 int RageSoundReader_MP3::Read(float* buf, int iFrames) {
@@ -138,17 +138,17 @@ int RageSoundReader_MP3::Read(float* buf, int iFrames) {
 				return ERROR;
 			}
 
-			while (avcodec_receive_frame(codecContext, frame) == 0) {
-				int outputSamples = swr_convert(swrContext, &outputBuffer, bufferSize, (const uint8_t**)frame->data, frame->nb_samples);
-				if (outputSamples < 0) {
-					SetError("Error converting samples");
-					return ERROR;
-				}
+			//while (avcodec_receive_frame(codecContext, frame) == 0) {
+			//	int outputSamples = swr_convert(swrContext, &outputBuffer, bufferSize, (const uint8_t**)frame->data, frame->nb_samples);
+			//	if (outputSamples < 0) {
+			//		SetError("Error converting samples");
+			//		return ERROR;
+			//	}
 
-				int framesRead = outputSamples / Channels;
-				iFramesWritten += framesRead;
-				outputBuffer += outputSamples * bytesPerSample;
-				bufferSize -= outputSamples * bytesPerSample;
+				//int framesRead = outputSamples / Channels;
+				//iFramesWritten += framesRead;
+				//outputBuffer += outputSamples * bytesPerSample;
+				//bufferSize -= outputSamples * bytesPerSample;
 			}
 		}
 

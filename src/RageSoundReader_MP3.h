@@ -4,7 +4,7 @@
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
-#include <libswresample/swresample.h>
+//#include <libswresample/swresample.h>
 #include <libavutil/avutil.h>
 #include <libavutil/opt.h>
 }
@@ -33,7 +33,7 @@ private:
 	AVCodecContext* codecContext;
 	AVFrame* frame;
 	AVPacket* packet;
-	SwrContext* swrContext;
+	//SwrContext* swrContext;
 	int audioStreamIndex;
 	int64_t nextPts;
 	int SampleRate;
