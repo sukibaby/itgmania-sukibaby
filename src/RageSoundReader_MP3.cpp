@@ -14,7 +14,6 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/samplefmt.h>
-//#include <libswresample/swresample.h>
 }
 
 RageSoundReader_MP3::RageSoundReader_MP3()
@@ -49,76 +48,67 @@ RageSoundReader_FileReader::OpenResult RageSoundReader_MP3::Open(RageFileBasic* 
 
 	// Get the codec context
 	AVStream* audioStream = formatContext->streams[audioStreamIndex];
-	const AVCodec* codec = avcodec_find_decoder(audioStream->codecpar->codec_id);
-	if (!codec) {
-		SetError("Failed to find codec");
-		return OPEN_UNKNOWN_FILE_FORMAT;
+	codecContext = avcodec_alloc_context3(nullptr);
+	if (!codecContext) {
+		SetError("Failed to allocate codec context");
+		return OPEN_FATAL_ERROR;
 	}
 
-	codecContext = avcodec_alloc_context3(codec);
 	if (avcodec_parameters_to_context(codecContext, audioStream->codecpar) < 0) {
 		SetError("Failed to copy codec parameters to codec context");
-		return OPEN_UNKNOWN_FILE_FORMAT;
+		return OPEN_FATAL_ERROR;
+	}
+
+	// Find and open the codec
+	AVCodec* codec = avcodec_find_decoder(codecContext->codec_id);
+	if (!codec) {
+		SetError("Failed to find codec");
+		return OPEN_FATAL_ERROR;
 	}
 
 	if (avcodec_open2(codecContext, codec, nullptr) < 0) {
 		SetError("Failed to open codec");
-		return OPEN_UNKNOWN_FILE_FORMAT;
+		return OPEN_FATAL_ERROR;
 	}
 
-	//// Initialize the resampler
-	//swrContext = swr_alloc();
-	//if (!swrContext) {
-	//	SetError("Failed to allocate resampler context");
-	//	return OPEN_UNKNOWN_FILE_FORMAT;
-	//}
-
-	//av_opt_set_int(swrContext, "in_channel_layout", codecContext->channel_layout, 0);
-	//av_opt_set_int(swrContext, "in_sample_rate", codecContext->sample_rate, 0);
-	//av_opt_set_sample_fmt(swrContext, "in_sample_fmt", codecContext->sample_fmt, 0);
-	//av_opt_set_int(swrContext, "out_channel_layout", AV_CH_LAYOUT_STEREO, 0);
-	//av_opt_set_int(swrContext, "out_sample_rate", codecContext->sample_rate, 0);
-	//av_opt_set_sample_fmt(swrContext, "out_sample_fmt", AV_SAMPLE_FMT_FLT, 0);
-
-	//if (swr_init(swrContext) < 0) {
-	//	SetError("Failed to initialize resampler");
-	//	return OPEN_UNKNOWN_FILE_FORMAT;
-	//}
-
+	// Allocate frame and packet
 	frame = av_frame_alloc();
-	packet = av_packet_alloc();
+	if (!frame) {
+		SetError("Failed to allocate frame");
+		return OPEN_FATAL_ERROR;
+	}
 
-	SampleRate = codecContext->sample_rate;
-	Channels = 2; // We are converting to stereo
+	packet = av_packet_alloc();
+	if (!packet) {
+		SetError("Failed to allocate packet");
+		return OPEN_FATAL_ERROR;
+	}
 
 	return OPEN_OK;
 }
 
+RString RageSoundReader_MP3::GetError() const {
+	return m_sError;
+}
+
+void RageSoundReader_MP3::SetError(RString sError) const {
+	m_sError = sError;
+}
+
 void RageSoundReader_MP3::Close() {
-	//if (packet) {
-	//	av_packet_free(&packet);
-	//	packet = nullptr;
-	//}
-	//if (frame) {
-	//	av_frame_free(&frame);
-	//	frame = nullptr;
-	//}
-	////if (swrContext) {
-	////	swr_free(&swrContext);
-	////	swrContext = nullptr;
-	////}
-	//if (codecContext) {
-	//	avcodec_free_context(&codecContext);
-	//	codecContext = nullptr;
-	//}
-	//if (formatContext) {
-	//	avformat_close_input(&formatContext);
-	//	formatContext = nullptr;
-	//}
-	//if (m_pFile) {
-	//	//m_pFile->Close();
-	//	m_pFile = nullptr;
-	//}
+	if (packet) {
+		av_packet_free(&packet);
+	}
+	if (frame) {
+		av_frame_free(&frame);
+	}
+	if (codecContext) {
+		avcodec_free_context(&codecContext);
+	}
+	if (formatContext) {
+		avformat_close_input(&formatContext);
+	}
+	m_pFile = nullptr;
 }
 
 int RageSoundReader_MP3::Read(float* buf, int iFrames) {
@@ -135,20 +125,23 @@ int RageSoundReader_MP3::Read(float* buf, int iFrames) {
 		if (packet->stream_index == audioStreamIndex) {
 			if (avcodec_send_packet(codecContext, packet) < 0) {
 				SetError("Error sending packet to decoder");
-				return ERROR;
+				return -1;
 			}
 
-			//while (avcodec_receive_frame(codecContext, frame) == 0) {
-			//	int outputSamples = swr_convert(swrContext, &outputBuffer, bufferSize, (const uint8_t**)frame->data, frame->nb_samples);
-			//	if (outputSamples < 0) {
-			//		SetError("Error converting samples");
-			//		return ERROR;
-			//	}
+			while (avcodec_receive_frame(codecContext, frame) == 0) {
+				int dataSize = av_samples_get_buffer_size(nullptr, codecContext->channels, frame->nb_samples, AV_SAMPLE_FMT_FLT, 1);
+				if (dataSize < 0) {
+					SetError("Failed to calculate data size");
+					return -1;
+				}
 
-				//int framesRead = outputSamples / Channels;
-				//iFramesWritten += framesRead;
-				//outputBuffer += outputSamples * bytesPerSample;
-				//bufferSize -= outputSamples * bytesPerSample;
+				if (iFramesWritten + frame->nb_samples > iFrames) {
+					dataSize = (iFrames - iFramesWritten) * Channels * bytesPerSample;
+				}
+
+				memcpy(outputBuffer, frame->data[0], dataSize);
+				outputBuffer += dataSize;
+				iFramesWritten += frame->nb_samples;
 			}
 		}
 
@@ -157,6 +150,7 @@ int RageSoundReader_MP3::Read(float* buf, int iFrames) {
 
 	return iFramesWritten;
 }
+
 
 int RageSoundReader_MP3::GetNextSourceFrame() const {
 	return static_cast<int>(nextPts);
@@ -203,4 +197,16 @@ int RageSoundReader_MP3::SetPosition(int iFrame) {
 	nextPts = iFrame;
 
 	return 0; // Return 0 to indicate success
+}
+
+RString RageSoundReader_MP3::GetError() const {
+	return m_sError;
+}
+
+float RageSoundReader_MP3::GetStreamToSourceRatio() const {
+	// Implementation of the GetStreamToSourceRatio function
+	return 0.0f; // Placeholder return value
+}
+int RageSoundReader_MP3::GetSampleRate() const {
+	return SampleRate;
 }

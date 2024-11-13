@@ -4,7 +4,6 @@
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
-//#include <libswresample/swresample.h>
 #include <libavutil/avutil.h>
 #include <libavutil/opt.h>
 }
@@ -29,6 +28,7 @@ public:
 	float GetStreamToSourceRatio() const override;
 
 private:
+void SetError(const RString& error);
 	AVFormatContext* formatContext;
 	AVCodecContext* codecContext;
 	AVFrame* frame;
