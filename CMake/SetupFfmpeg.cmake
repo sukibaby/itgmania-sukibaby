@@ -27,7 +27,10 @@ list(APPEND FFMPEG_CONFIGURE
             "--enable-static"
             "--enable-zlib"
             "--enable-libmp3lame"
-            "--prefix=/")
+            "--prefix=/"
+            "--extra-cflags=-MD -I\"../libmp3lame/include\""
+            "--extra-ldflags=-LIBPATH:\"../libmp3lame/lib/Win32/Release_MD\"")
+
 
 if(CMAKE_POSITION_INDEPENDENT_CODE)
   list(APPEND FFMPEG_CONFIGURE "--enable-pic")
