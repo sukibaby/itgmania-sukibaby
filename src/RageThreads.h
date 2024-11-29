@@ -2,9 +2,6 @@
 #define RAGE_THREADS_H
 
 #include <cstdint>
-#include <limits>
-
-static constexpr uint_fast64_t FAST_ULL_MAX = std::numeric_limits<uint_fast64_t>::max();
 
 struct ThreadSlot;
 class RageTimer;
@@ -131,12 +128,12 @@ class LockMutex
 
 	const char *file;
 	int line;
-	uint_fast64_t locked_at;
+	uint64_t locked_at;
 	bool locked;
 
 public:
 	LockMutex(RageMutex &mut, const char *file, int line);
-	LockMutex(RageMutex &mut): mutex(mut), file(nullptr), line(-1), locked_at(FAST_ULL_MAX), locked(true) { mutex.Lock(); }
+	LockMutex(RageMutex &mut): mutex(mut), file(nullptr), line(-1), locked_at(UINT64_MAX), locked(true) { mutex.Lock(); }
 	~LockMutex();
 	LockMutex(LockMutex &cpy): mutex(cpy.mutex), file(nullptr), line(-1), locked_at(cpy.locked_at), locked(true) { mutex.Lock(); }
 
