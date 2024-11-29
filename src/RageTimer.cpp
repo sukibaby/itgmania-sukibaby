@@ -30,19 +30,10 @@
 #include <cmath>
 #include <cstdint>
 
-const uint64_t ONE_SECOND_IN_MICROSECONDS_ULL = 1000000ULL;
-const int64_t ONE_SECOND_IN_MICROSECONDS_LL = 1000000LL;
-const uint_fast64_t ONE_SECOND_IN_MICROSECONDS_FAST_ULL = 1000000ULL;
-const double ONE_SECOND_IN_MICROSECONDS_DBL = 1000000.0;
-
+// Initialize important variables and definitions
+#define ONE_SECOND_IN_MICROSECONDS 1000000
 const RageTimer RageZeroTimer(0,0);
-static const uint64_t g_iStartTime = ArchHooks::GetSystemTimeInMicroseconds();
-static uint_fast64_t g_iStartTimeFast64 = g_iStartTime;
-
-static uint64_t GetTime()
-{
-	return ArchHooks::GetSystemTimeInMicroseconds();
-}
+static const int64_t g_iStartTime = ArchHooks::GetSystemTimeInMicroseconds();
 
 /* The accuracy of RageTimer::GetTimeSinceStart() is directly tied to the
  * stability of the clock sync. Maintaining precision here is crucial. Too
@@ -54,27 +45,27 @@ static uint64_t GetTime()
  * and do thorough testing if you change anything here. -sukibaby */
 double RageTimer::GetTimeSinceStart()
 {
-	constexpr double USEC_TO_SEC = 1.0 / 1000000.0;
-	return static_cast<double>(RageTimer::GetTimeSinceStartMicroseconds()) * USEC_TO_SEC;
+	const uint64_t usecs = ArchHooks::GetSystemTimeInMicroseconds() - g_iStartTime;
+	return usecs / ONE_SECOND_IN_MICROSECONDS;
+}
+
+uint64_t RageTimer::GetTimeSinceStartMicroseconds()
+{
+	return ArchHooks::GetSystemTimeInMicroseconds() - g_iStartTime;
 }
 
 int RageTimer::GetTimeSinceStartSeconds()
 {
-    uint_fast64_t usec = RageTimer::GetTimeSinceStartMicroseconds();
-    return static_cast<int>(usec / ONE_SECOND_IN_MICROSECONDS_FAST_ULL);
-}
-
-uint_fast64_t RageTimer::GetTimeSinceStartMicroseconds()
-{
-	return GetTime() - g_iStartTimeFast64;
+	const uint64_t usecs = ArchHooks::GetSystemTimeInMicroseconds() - g_iStartTime;
+	return static_cast<int>(usecs / ONE_SECOND_IN_MICROSECONDS);
 }
 
 void RageTimer::Touch()
 {
-	uint64_t usecs = GetTime();
+	uint64_t usecs = ArchHooks::GetSystemTimeInMicroseconds();
 
-	this->m_secs = uint64_t(usecs / ONE_SECOND_IN_MICROSECONDS_ULL);
-	this->m_us = uint64_t(usecs % ONE_SECOND_IN_MICROSECONDS_ULL);
+	this->m_secs = uint64_t(usecs / ONE_SECOND_IN_MICROSECONDS);
+	this->m_us = uint64_t(usecs % ONE_SECOND_IN_MICROSECONDS);
 }
 
 float RageTimer::Ago() const
@@ -129,7 +120,7 @@ RageTimer RageTimer::Sum(const RageTimer& lhs, float tm)
 	 * tm == 5.25  -> secs =  5, us = 5.25  - ( 5) = .25
 	 * tm == -1.25 -> secs = -2, us = -1.25 - (-2) = .75 */
 	int64_t seconds = std::floor(tm);
-	int64_t us = static_cast<int64_t>((tm - seconds) * ONE_SECOND_IN_MICROSECONDS_LL);
+	int64_t us = static_cast<int64_t>((tm - seconds) * ONE_SECOND_IN_MICROSECONDS);
 
 	// Prevent unnecessarily checking the time
 	RageTimer ret(0, 0);
@@ -138,10 +129,10 @@ RageTimer RageTimer::Sum(const RageTimer& lhs, float tm)
 	ret.m_secs = seconds + lhs.m_secs;
 	ret.m_us = us + lhs.m_us;
 
-	// Adjust the seconds and microseconds if microseconds is greater than or equal to TIMESTAMP_RESOLUTION
-	if (ret.m_us >= ONE_SECOND_IN_MICROSECONDS_ULL)
+	// Adjust the seconds and microseconds if microseconds is greater than or equal to 1000000
+	if (ret.m_us >= ONE_SECOND_IN_MICROSECONDS)
 	{
-		ret.m_us -= ONE_SECOND_IN_MICROSECONDS_ULL;
+		ret.m_us -= ONE_SECOND_IN_MICROSECONDS;
 		++ret.m_secs;
 	}
 
@@ -157,13 +148,15 @@ double RageTimer::Difference(const RageTimer& lhs, const RageTimer& rhs)
 	// Adjust seconds and microseconds if microseconds is negative
 	if ( us < 0 )
 	{
-		us += ONE_SECOND_IN_MICROSECONDS_LL;
+		us += ONE_SECOND_IN_MICROSECONDS;
 		--secs;
 	}
 
 	// Return the difference as a double to preserve the fractional part
-	return static_cast<double>(secs) + static_cast<double>(us) / ONE_SECOND_IN_MICROSECONDS_DBL;
+	return static_cast<double>(secs) + static_cast<double>(us) / ONE_SECOND_IN_MICROSECONDS;
 }
+
+#undef ONE_SECOND_IN_MICROSECONDS
 
 #include "LuaManager.h"
 LuaFunction(GetTimeSinceStart, RageTimer::GetTimeSinceStartFast())
