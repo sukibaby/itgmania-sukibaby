@@ -312,6 +312,7 @@ PrefsManager::PrefsManager() :
 	m_RSMBBufferSize("AudioBufferSize", DEFAULT_AUDIO_BUFFER_SIZE),
 
 	/* Debug: */
+	m_bDebugMenuEnabled("DebugMenuEnabled", true),
 	m_bLogToDisk			( "LogToDisk",		true ),
 #if defined(DEBUG)
 	m_bForceLogFlush		( "ForceLogFlush",	true ),

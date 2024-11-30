@@ -338,6 +338,7 @@ public:
 	Preference<unsigned int> m_RSMBBufferSize;
 
 	// Debug:
+	Preference<bool>	m_bDebugMenuEnabled;
 	Preference<bool>	m_bLogToDisk;
 	Preference<bool>	m_bForceLogFlush;
 	Preference<bool>	m_bShowLogOutput;

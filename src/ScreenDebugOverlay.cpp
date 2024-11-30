@@ -33,13 +33,13 @@
 
 #include <vector>
 
-
 static bool g_bIsDisplayed = false;
 static bool g_bIsSlow = false;
 static bool g_bIsHalt = false;
 static RageTimer g_HaltTimer(RageZeroTimer);
 static float g_fImageScaleCurrent = 1;
 static float g_fImageScaleDestination = 1;
+static bool isDebugMenuEnabled = true;
 
 // DebugLine theming
 static const ThemeMetric<RageColor>	BACKGROUND_COLOR	("ScreenDebugOverlay", "BackgroundColor");
@@ -94,7 +94,6 @@ static bool IsGameplay()
 {
 	return SCREENMAN && SCREENMAN->GetTopScreen() && SCREENMAN->GetTopScreen()->GetScreenType() == gameplay;
 }
-
 
 REGISTER_SCREEN_CLASS( ScreenDebugOverlay );
 
@@ -179,7 +178,13 @@ static bool GetKeyFromMap( const std::map<U, V> &m, const V &val, U &key )
 static LocalizedString DEBUG_MENU( "ScreenDebugOverlay", "Debug Menu" );
 void ScreenDebugOverlay::Init()
 {
+	isDebugMenuEnabled = PREFSMAN->m_bDebugMenuEnabled.Get();
+
 	Screen::Init();
+
+	if (!isDebugMenuEnabled) {
+		return;
+	}
 
 	// Init debug mappings
 	// TODO: Arch-specific?
@@ -318,6 +323,9 @@ void ScreenDebugOverlay::Init()
 
 void ScreenDebugOverlay::Update( float fDeltaTime )
 {
+	if (!isDebugMenuEnabled) {
+		return;
+	}
 	{
 		float fRate = 1;
 		if( INPUTFILTER->IsBeingPressed(g_Mappings.holdForFast) )
@@ -439,6 +447,10 @@ static bool GetValueFromMap( const std::map<U, V> &m, const U &key, V &val )
 
 bool ScreenDebugOverlay::Input( const InputEventPlus &input )
 {
+	if (!isDebugMenuEnabled) {
+		return Screen::Input(input);
+	}
+
 	if( input.DeviceI == g_Mappings.holdForDebug1 ||
 		input.DeviceI == g_Mappings.holdForDebug2 )
 	{
