@@ -454,6 +454,11 @@ static bool GetValueFromMap( const std::map<U, V> &m, const U &key, V &val )
 
 bool ScreenDebugOverlay::Input( const InputEventPlus &input )
 {
+	if (!g_bEnableDebugMenu)
+	{
+		return Screen::Input(input);
+	}
+
 	if( input.DeviceI == g_Mappings.holdForDebug1 ||
 		input.DeviceI == g_Mappings.holdForDebug2 )
 	{
