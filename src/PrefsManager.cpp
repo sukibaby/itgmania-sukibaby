@@ -312,7 +312,7 @@ PrefsManager::PrefsManager() :
 	m_RSMBBufferSize("AudioBufferSize", DEFAULT_AUDIO_BUFFER_SIZE),
 
 	/* Debug: */
-	m_bDebugMenuEnabled("DebugMenuEnabled", false),
+	m_bDebugMenuEnabled	("DebugMenuEnabled", true),
 	m_bLogToDisk			( "LogToDisk",		true ),
 #if defined(DEBUG)
 	m_bForceLogFlush		( "ForceLogFlush",	true ),
@@ -419,11 +419,8 @@ void PrefsManager::ReadPrefsFromDisk()
 	TranslateDeprecatedFlags();
 
 	if( !m_sCurrentGame.Get().empty() )
-	{
 		RestoreGamePrefs();
-	}
 }
-
 
 void PrefsManager::ResetToFactoryDefaults()
 {
@@ -480,10 +477,7 @@ void PrefsManager::ReadGamePrefsFromIni( const RString &sIni )
 {
 	IniFile ini;
 	if( !ini.ReadFile(sIni) )
-	{
-		LOG->Warn("Failed to read game preferences from file: %s", sIni.c_str());
 		return;
-	}
 
 	FOREACH_CONST_Child( &ini, section )
 	{
