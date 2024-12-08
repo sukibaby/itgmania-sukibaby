@@ -98,21 +98,21 @@ float ArrowEffects::GetTime()
 	double offset = static_cast<double>(curr_options->m_fModTimerOffset);
 	ModTimerType modtimer = curr_options->m_ModTimerType;
 	double time;
-	switch (modtimer)
+	switch(modtimer)
 	{
-	case ModTimerType_Default:
-	case ModTimerType_Game:
-		time = (RageTimer::GetTimeSinceStart() + offset) * mult;
-		break;
-	case ModTimerType_Beat:
-		time = (static_cast<double>(GAMESTATE->m_Position.m_fSongBeatVisible) + offset) * mult;
-		break;
-	case ModTimerType_Song:
-		time = (static_cast<double>(GAMESTATE->m_Position.m_fMusicSeconds) + offset) * mult;
-		break;
-	default:
-		time = RageTimer::GetTimeSinceStart() + offset;
-		break;
+		case ModTimerType_Default:
+		case ModTimerType_Game:
+			time = (RageTimer::GetTimeSinceStart() + offset) * mult;
+			break;
+		case ModTimerType_Beat:
+			time = (static_cast<double>(GAMESTATE->m_Position.m_fSongBeatVisible) + offset) * mult;
+			break;
+		case ModTimerType_Song:
+			time = (static_cast<double>(GAMESTATE->m_Position.m_fMusicSeconds) + offset) * mult;
+			break;
+		default:
+			time = RageTimer::GetTimeSinceStart() + offset;
+			break;
 	}
 	return static_cast<float>(time);
 }
@@ -344,9 +344,9 @@ void ArrowEffects::Update()
 		if( !position.m_bFreeze || !position.m_bDelay )
 		{
 			data.m_fExpandSeconds += static_cast<float>(fTime - fLastTime);
-			data.m_fExpandSeconds = std::fmod(data.m_fExpandSeconds, (PI * 2) / (accels[PlayerOptions::ACCEL_EXPAND_PERIOD] + 1));
+			data.m_fExpandSeconds = std::fmod( data.m_fExpandSeconds, (PI*2)/(accels[PlayerOptions::ACCEL_EXPAND_PERIOD]+1) );
 			data.m_fTanExpandSeconds += static_cast<float>(fTime - fLastTime);
-			data.m_fTanExpandSeconds = std::fmod(data.m_fTanExpandSeconds, (PI * 2) / (accels[PlayerOptions::ACCEL_TAN_EXPAND_PERIOD] + 1));
+			data.m_fTanExpandSeconds = std::fmod( data.m_fTanExpandSeconds, (PI*2)/(accels[PlayerOptions::ACCEL_TAN_EXPAND_PERIOD]+1) );
 		}
 
 		// Update Invert
