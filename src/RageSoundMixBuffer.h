@@ -4,37 +4,68 @@
 #define RAGE_SOUND_MIX_BUFFER_H
 
 #include <cstdint>
+#include <vector>
 
 class RageSoundMixBuffer
 {
 public:
-	RageSoundMixBuffer();
-	~RageSoundMixBuffer();
-
-	// See how many samples we can stuff into 2MB.
-	static constexpr size_t BUF_SIZE = 2 * 1024 * 1024 / sizeof(float);
-
 	// Mix the given buffer of samples.
-	void write( const float *pBuf, unsigned iSize, int iSourceStride = 1, int iDestStride = 1 );
+	void write( const float *pBuf, unsigned iSize, int iSourceStride = 1, int iDestStride = 1 ) noexcept;
 
 	// Extend the buffer as if write() was called with a buffer of silence.
-	void Extend( unsigned iSamples );
+	void Extend( unsigned iSamples ) noexcept;
 
-	void read( int16_t *pBuf );
-	void read( float *pBuf );
-	void read_deinterlace( float **pBufs, int channels );
-	float *read() { return m_pMixbuf; }
+	// Deinterlaces the mixed audio buffer into separate channel buffers.
+	void read_deinterlace( float **pBufs, int channels ) noexcept;
+
+	// Returns a pointer to the internal mixed audio buffer.
+	float *read() { return m_pMixbuf.data(); }
+
+	// Returns the number of samples in the mixed audio buffer.
 	unsigned size() const { return m_iBufUsed; }
-	void SetWriteOffset( int iOffset );
 
+	// These inline functions can be found below the class.
+	void SetWriteOffset(int iOffset) noexcept;
+	void read(int16_t *pBuf) noexcept;
+	void read(float *pBuf) noexcept;
+
+	inline int_fast64_t CalculateNewSize(int_fast64_t realsize, int_fast64_t chunksize) const
+	{
+		return ((realsize + chunksize - 1) / chunksize) * chunksize;
+	}
 private:
-	float *m_pMixbuf;
-	uint64_t m_iBufSize; // actual allocated samples
-	uint64_t m_iBufUsed; // used samples
-	int m_iOffset;
+	std::vector<float> m_pMixbuf;
+	int_fast64_t m_iBufSize = 0; // the actual allocated samples
+	int_fast64_t m_iBufUsed = 0; // the number of samples currently held in the buffer
+	int_fast64_t m_iOffset = 0; // the offset in samples to start mixing into the buffer
 };
 
-#endif
+inline void RageSoundMixBuffer::read(int16_t *pBuf) noexcept
+{
+	constexpr float kInt16Max = static_cast<float>(INT16_MAX);
+	for (unsigned iPos = 0; iPos < m_iBufUsed; ++iPos)
+	{
+		float iOut = m_pMixbuf[iPos];
+		iOut = std::max(-1.0f, std::min(iOut, 1.0f));
+		pBuf[iPos] = static_cast<int16_t>((iOut * kInt16Max) + (iOut >= 0 ? 0.5f : -0.5f));
+	}
+	m_iBufUsed = 0;
+}
+
+inline void RageSoundMixBuffer::read(float *pBuf) noexcept
+{
+	std::memcpy(pBuf, m_pMixbuf.data(), m_iBufUsed * sizeof(float));
+	m_iBufUsed = 0;
+}
+
+// write() will start mixing iOffset samples into the buffer. Be careful; this is
+// measured in samples, not frames, so if the data is stereo, multiply by two.
+inline void RageSoundMixBuffer::SetWriteOffset(int iOffset) noexcept
+{
+	m_iOffset = iOffset;
+}
+
+#endif // RAGE_SOUND_MIX_BUFFER_H
 
 /*
  * Copyright (c) 2002-2004 Glenn Maynard
