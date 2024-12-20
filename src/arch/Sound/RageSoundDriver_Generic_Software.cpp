@@ -496,10 +496,7 @@ int64_t RageSoundDriver::ClampHardwareFrame( int64_t iHardwareFrame ) const
 		}
 		return m_iMaxHardwareFrame;
 	}
-	if( iHardwareFrame > m_iMaxHardwareFrame )
-	{
-		m_iMaxHardwareFrame = iHardwareFrame;
-	}
+	m_iMaxHardwareFrame = std::max(iHardwareFrame, m_iMaxHardwareFrame);
 	return m_iMaxHardwareFrame;
 }
 
@@ -529,16 +526,6 @@ int64_t RageSoundDriver::GetHardwareFrame( RageTimer *pTimestamp=nullptr ) const
 		uint64_t elapsedTime = RageTimer::GetTimeSinceStartMicroseconds() - iStartTime;
 		if (elapsedTime <= iThreshold) break;
 	} while (--iTries);
-
-	if( iTries == 0 )
-	{
-		static bool bLogged = false;
-		if( !bLogged )
-		{
-			bLogged = true;
-			LOG->Warn( "RageSoundDriver::GetHardwareFrame: too many tries" );
-		}
-	}
 
 	return ClampHardwareFrame( iPositionFrames );
 }
