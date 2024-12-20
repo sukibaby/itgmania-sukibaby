@@ -52,8 +52,10 @@ static inline uint64_t GetTime() noexcept
  * and do thorough testing if you change anything here. -sukibaby */
 double RageTimer::GetTimeSinceStart()
 {
-	const uint64_t usecs = (GetTime() - g_iStartTime);
-	return static_cast<double>(usecs / ONE_SECOND_IN_MICROSECONDS_DBL);
+	const uint64_t microseconds = (GetTime() - g_iStartTime);
+	const uint64_t seconds = microseconds / ONE_SECOND_IN_MICROSECONDS_ULL;
+	const uint64_t remainingMicroseconds = microseconds % ONE_SECOND_IN_MICROSECONDS_ULL;
+	return static_cast<double>(seconds) + static_cast<double>(remainingMicroseconds) / ONE_SECOND_IN_MICROSECONDS_ULL;
 }
 
 int RageTimer::GetTimeSinceStartSeconds()
