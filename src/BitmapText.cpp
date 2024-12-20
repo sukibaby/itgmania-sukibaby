@@ -689,6 +689,21 @@ bool BitmapText::EarlyAbortDraw() const
 // draw text at x, y using colorTop blended down to colorBottom, with size multiplied by scale
 void BitmapText::DrawPrimitives() noexcept
 {
+	// Are there any text lines to draw?
+	if (EarlyAbortDraw())
+	{
+		return;
+	}
+
+	// Is the object -fully- transparent?
+	if (m_pTempState->diffuse[0].a == 0)
+	{
+		return;
+	}
+
+	// Clear leftover attributes
+	ClearAttributes();
+
 	Actor::SetGlobalRenderStates(); // set Actor-specified render states
 	DISPLAY->SetTextureMode( TextureUnit_1, TextureMode_Modulate );
 
