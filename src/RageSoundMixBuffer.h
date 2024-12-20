@@ -10,7 +10,7 @@ class RageSoundMixBuffer
 {
 public:
 	// Mix the given buffer of samples.
-	void write( const float *pBuf, unsigned iSize, int iSourceStride = 1, int iDestStride = 1 ) noexcept;
+	void write( const float *pBuf, uint64_t iSize, int64_t iSourceStride = 1, int64_t iDestStride = 1 ) noexcept;
 
 	// Extend the buffer as if write() was called with a buffer of silence.
 	void Extend( unsigned iSamples ) noexcept;

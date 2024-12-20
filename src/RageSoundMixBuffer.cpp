@@ -27,10 +27,12 @@ void RageSoundMixBuffer::Extend(unsigned iSamples) noexcept
 	}
 }
 
-void RageSoundMixBuffer::write( const float *pBuf, unsigned iSize, int iSourceStride, int iDestStride ) noexcept
+void RageSoundMixBuffer::write( const float *pBuf, uint64_t iSize, int64_t iSourceStride, int64_t iDestStride ) noexcept
 {
 	if( iSize == 0 )
+	{
 		return;
+	}
 
 	// iSize = 3, iDestStride = 2 uses 4 frames.  Don't allocate the stride of the last sample.
 	Extend( iSize * iDestStride - (iDestStride-1) );
