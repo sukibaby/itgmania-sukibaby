@@ -18,6 +18,8 @@
  * using the correct format specifier, please modify it
  * to use PRId64 for int64_t, or PRIu64 for uint64_t */
 
+#define ONE_SECOND_IN_MICROSECONDS 1000000
+
 static const int channels = 2;
 
 static int frames_to_buffer;
@@ -198,8 +200,7 @@ void RageSoundDriver::DecodeThread()
 		/* Fill each playing sound, round-robin. */
 		{
 			int iSampleRate = GetSampleRate();
-			ASSERT_M( iSampleRate > 0, ssprintf("%i", iSampleRate) );
-			int iUsecs = 1000000*chunksize() / iSampleRate;
+			int iUsecs = ONE_SECOND_IN_MICROSECONDS*chunksize() / iSampleRate;
 			usleep( iUsecs );
 		}
 
@@ -301,7 +302,6 @@ void RageSoundDriver::Update()
 //		LOG->Trace("set (#%i) %p from STOPPING to HALTING", i, m_Sounds[i].m_pSound);
 	}
 
-	constexpr uint64_t iUsecs = 1000000;
 	static uint64_t fNextUsecs = 0;
 	if (RageTimer::GetTimeSinceStartMicroseconds() >= fNextUsecs)
 	{
@@ -315,7 +315,7 @@ void RageSoundDriver::Update()
 
 			/* Don't log again for at least a second, or we'll burst output
 			 * and possibly cause more underruns. */
-			fNextUsecs = RageTimer::GetTimeSinceStartMicroseconds() + iUsecs;
+			fNextUsecs = RageTimer::GetTimeSinceStartMicroseconds() + ONE_SECOND_IN_MICROSECONDS;
 		}
 	}
 
@@ -489,17 +489,14 @@ int64_t RageSoundDriver::ClampHardwareFrame( int64_t iHardwareFrame ) const
 		 * output spam. */
 		static int64_t lastTime = 0;
 		int64_t currentTime = RageTimer::GetTimeSinceStartMicroseconds();
-		if( lastTime == 0 || (currentTime - lastTime) > 1000000 )
+		if( lastTime == 0 || (currentTime - lastTime) > ONE_SECOND_IN_MICROSECONDS )
 		{
 			LOG->Trace("RageSoundDriver: driver returned a lesser position (%" PRId64 " < %" PRId64 ")", iHardwareFrame, m_iMaxHardwareFrame);
 			lastTime = currentTime;
 		}
 		return m_iMaxHardwareFrame;
 	}
-	if( iHardwareFrame > m_iMaxHardwareFrame )
-	{
-		m_iMaxHardwareFrame = iHardwareFrame;
-	}
+	m_iMaxHardwareFrame = std::max(iHardwareFrame, m_iMaxHardwareFrame);
 	return m_iMaxHardwareFrame;
 }
 
@@ -529,16 +526,6 @@ int64_t RageSoundDriver::GetHardwareFrame( RageTimer *pTimestamp=nullptr ) const
 		uint64_t elapsedTime = RageTimer::GetTimeSinceStartMicroseconds() - iStartTime;
 		if (elapsedTime <= iThreshold) break;
 	} while (--iTries);
-
-	if( iTries == 0 )
-	{
-		static bool bLogged = false;
-		if( !bLogged )
-		{
-			bLogged = true;
-			LOG->Warn( "RageSoundDriver::GetHardwareFrame: too many tries" );
-		}
-	}
 
 	return ClampHardwareFrame( iPositionFrames );
 }
