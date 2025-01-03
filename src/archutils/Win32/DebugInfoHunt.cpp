@@ -4,6 +4,7 @@
 #include "RageUtil.h"
 #include "VideoDriverInfo.h"
 #include "RegistryAccess.h"
+#include "ErrorStrings.h"
 
 #include <vector>
 
@@ -19,13 +20,20 @@ static void LogVideoDriverInfo( VideoDriverInfo info )
 
 static void GetMemoryDebugInfo()
 {
-	MEMORYSTATUS mem;
-	GlobalMemoryStatus(&mem);
-
-	LOG->Info("Memory: %imb total, %imb swap (%imb swap avail)",
-		mem.dwTotalPhys / 1048576,
-		mem.dwTotalPageFile / 1048576,
-		mem.dwAvailPageFile / 1048576);
+	MEMORYSTATUSEX mem;
+	mem.dwLength = sizeof(mem);
+	if (GlobalMemoryStatusEx(&mem))
+	{
+		static const int MB = 1048576;
+		LOG->Info("Memory: %lluMB total, %lluMB swap (%lluMB swap avail)",
+			mem.ullTotalPhys / MB,
+			mem.ullTotalPageFile / MB,
+			mem.ullAvailPageFile / MB);
+	}
+	else
+	{
+		LOG->Warn("GlobalMemoryStatusEx failed: %s", werr_ssprintf(GetLastError(), "GlobalMemoryStatusEx").c_str());
+	}
 }
 
 static void GetDisplayDriverDebugInfo()
@@ -139,98 +147,50 @@ static void GetDriveDebugInfo()
 
 static void GetWindowsVersionDebugInfo()
 {
-	// Detect operating system.
-	OSVERSIONINFO ovi;
-	ovi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-#pragma warning( push )
-#pragma warning( disable : 4996 )
-	if (!GetVersionEx(&ovi))
-#pragma warning( pop )
+	typedef LONG(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
+	HMODULE hMod = GetModuleHandleW(L"ntdll.dll");
+	if (hMod)
 	{
-		LOG->Info("GetVersionEx failed!");
-		return;
-	}
+		RtlGetVersionPtr pRtlGetVersion = (RtlGetVersionPtr)GetProcAddress(hMod, "RtlGetVersion");
+		if (pRtlGetVersion)
+		{
+			OSVERSIONINFOEXW osvi = { 0 };
+			osvi.dwOSVersionInfoSize = sizeof(osvi);
+			if (pRtlGetVersion((PRTL_OSVERSIONINFOW)&osvi) == 0)
+			{
+				RString Ver = ssprintf("Windows %lu.%lu (", osvi.dwMajorVersion, osvi.dwMinorVersion);
+				if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 1)
+					Ver += "Win7";
+				else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 2)
+					Ver += "Win8";
+				else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 3)
+					Ver += "Win8.1";
+				else if (osvi.dwMajorVersion == 10 && osvi.dwMinorVersion == 0)
+					Ver += "Win10";
+				else if (osvi.dwMajorVersion == 10 && osvi.dwMinorVersion == 1)
+					Ver += "Win11";
+				else
+					Ver += "unknown";
 
-	RString Ver = ssprintf("Windows %i.%i (", ovi.dwMajorVersion, ovi.dwMinorVersion);
-	if(ovi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
-	{
-		if(ovi.dwMinorVersion == 0)
-			Ver += "Win95";
-		else if(ovi.dwMinorVersion == 10)
-			Ver += "Win98";
-		else if(ovi.dwMinorVersion == 90)
-			Ver += "WinME";
-		else
-			Ver += "unknown 9x-based";
+				Ver += ssprintf(") build %lu [%s]", osvi.dwBuildNumber, osvi.szCSDVersion);
+				LOG->Info("%s", Ver.c_str());
+				return;
+			}
+		}
 	}
-	else if(ovi.dwPlatformId == VER_PLATFORM_WIN32_NT)
-	{
-		if(ovi.dwMajorVersion == 4 && ovi.dwMinorVersion == 0)
-			Ver += "WinNT 4.0";
-		else if(ovi.dwMajorVersion == 5 && ovi.dwMinorVersion == 0)
-			Ver += "Win2000";
-		else if(ovi.dwMajorVersion == 5 && ovi.dwMinorVersion == 1)
-			Ver += "WinXP";
-		else if(ovi.dwMajorVersion == 5 && ovi.dwMinorVersion == 2)
-		{
-			Ver += "WinServer2003";
-			// todo: check for R2
-			/*
-			if(GetSystemMetrics(SM_SERVERR2) != 0)
-				Ver += "R2";
-			*/
-		}
-		else if(ovi.dwMajorVersion == 6 && ovi.dwMinorVersion == 0)
-		{
-			Ver += "Vista";
-			// todo: make this check work
-			/*
-			if(ovi.wProductType == VER_NT_WORKSTATION)
-				Ver += "Vista";
-			else
-				Ver += "WinServer2008";
-			*/
-		}
-		else if(ovi.dwMajorVersion == 6 && ovi.dwMinorVersion == 1)
-		{
-			Ver += "Win7";
-			// todo: make this check work
-			/*
-			if(ovi.wProductType == VER_NT_WORKSTATION)
-				Ver += "Win7";
-			else
-				Ver += "WinServer2008 R2";
-			*/
-		}
-		else if(ovi.dwMajorVersion == 6 && ovi.dwMinorVersion == 2)
-		{
-			Ver += "Win8";
-			// todo: make this check work
-			/*
-			if(ovi.wProductType == VER_NT_WORKSTATION)
-				Ver += "Win7";
-			else
-				Ver += "WinServer2008 R2";
-			*/
-		}
-		else
-			Ver += "unknown NT-based";
-	} else Ver += "???";
-
-	Ver += ssprintf(") build %i [%s]", ovi.dwBuildNumber & 0xffff, ovi.szCSDVersion);
-	LOG->Info("%s", Ver.c_str());
+	LOG->Info("RtlGetVersion failed!");
 }
 
 static void GetSoundDriverDebugInfo()
 {
 	int cnt = waveOutGetNumDevs();
 
-	for(int i = 0; i < cnt; ++i)
+	for (int i = 0; i < cnt; ++i)
 	{
 		WAVEOUTCAPS caps;
 
 		MMRESULT ret = waveOutGetDevCaps(i, &caps, sizeof(caps));
-		if(ret != MMSYSERR_NOERROR)
+		if (ret != MMSYSERR_NOERROR)
 		{
 			LOG->Info(wo_ssprintf(ret, "waveOutGetDevCaps(%i) failed", i));
 			continue;
@@ -239,7 +199,7 @@ static void GetSoundDriverDebugInfo()
 			HIBYTE(caps.vDriverVersion),
 			LOBYTE(caps.vDriverVersion),
 			caps.wMid, caps.wPid,
-			caps.dwSupport & WAVECAPS_SAMPLEACCURATE? "":"(INACCURATE)");
+			caps.dwSupport & WAVECAPS_SAMPLEACCURATE ? "" : "(INACCURATE)");
 	}
 }
 
@@ -276,3 +236,4 @@ void SearchForDebugInfo()
  * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
