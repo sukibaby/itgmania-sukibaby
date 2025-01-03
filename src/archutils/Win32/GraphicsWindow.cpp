@@ -14,6 +14,7 @@
 #include "CommandLineActions.h"
 #include "DirectXHelpers.h"
 
+#include <optional>
 #include <set>
 
 static const RString g_sClassName = PRODUCT_ID;
@@ -48,6 +49,19 @@ static RString GetNewWindow()
 	sName = Basename(sName);
 
 	return sName;
+}
+
+static std::optional<DEVMODE> GetDisplaySettings(const RString& displayId)
+{
+	DEVMODE dm;
+	ZERO( dm );
+	dm.dmSize = sizeof(dm);
+	if (!EnumDisplaySettings(displayId, ENUM_CURRENT_SETTINGS, &dm))
+	{
+		LOG->Warn("%s", werr_ssprintf(GetLastError(), "EnumDisplaySettings failed").c_str());
+		return std::nullopt;
+	}
+	return dm;
 }
 
 static LRESULT CALLBACK GraphicsWindow_WndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
@@ -189,28 +203,15 @@ static LRESULT CALLBACK GraphicsWindow_WndProc( HWND hWnd, UINT msg, WPARAM wPar
 
 static void AdjustVideoModeParams( VideoModeParams &p )
 {
-	DEVMODE dm;
-	ZERO( dm );
-	dm.dmSize = sizeof(dm);
-	if (!EnumDisplaySettings(p.sDisplayId, ENUM_CURRENT_SETTINGS, &dm))
+	auto dmOpt = GetDisplaySettings(p.sDisplayId);
+	if (!dmOpt)
 	{
 		p.rate = 60;
-		LOG->Warn( "%s", werr_ssprintf(GetLastError(), "EnumDisplaySettings failed").c_str() );
 		return;
 	}
 
-	/* On a nForce 2 IGP on Windows 98, dm.dmDisplayFrequency sometimes 
-	 * (but not always) is 0.
-	 *
-	 * MSDN: When you call the EnumDisplaySettings function, the 
-	 * dmDisplayFrequency member may return with the value 0 or 1. 
-	 * These values represent the display hardware's default refresh rate. 
-	 * This default rate is typically set by switches on a display card or 
-	 * computer motherboard, or by a configuration program that does not 
-	 * use Win32 display functions such as ChangeDisplaySettings. */
-	if( !(dm.dmFields & DM_DISPLAYFREQUENCY) ||
-		dm.dmDisplayFrequency == 0 ||
-		dm.dmDisplayFrequency == 1 )
+	const auto& dm = *dmOpt;
+	if (!(dm.dmFields & DM_DISPLAYFREQUENCY) || dm.dmDisplayFrequency == 0 || dm.dmDisplayFrequency == 1)
 	{
 		p.rate = 60;
 		LOG->Warn( "EnumDisplaySettings doesn't know what the refresh rate is. %d %d %d", dm.dmPelsWidth, dm.dmPelsHeight, dm.dmBitsPerPel );
