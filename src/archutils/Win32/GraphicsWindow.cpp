@@ -234,9 +234,13 @@ RString GraphicsWindow::SetScreenMode( const VideoModeParams &p )
 		return RString();
 	}
 
-	DEVMODE DevMode;
-	ZERO( DevMode );
-	DevMode.dmSize = sizeof(DEVMODE);
+	auto dmOpt = GetDisplaySettings(p.sDisplayId);
+	if (!dmOpt)
+	{
+		return "Couldn't retrieve display settings";
+	}
+
+	DEVMODE DevMode = *dmOpt;
 	DevMode.dmPelsWidth = p.width;
 	DevMode.dmPelsHeight = p.height;
 	DevMode.dmBitsPerPel = p.bpp;
@@ -256,9 +260,11 @@ RString GraphicsWindow::SetScreenMode( const VideoModeParams &p )
 		ret = ChangeDisplaySettingsEx( p.sDisplayId, &DevMode, nullptr, CDS_FULLSCREEN, nullptr );
 	}
 
-	// XXX: append error
 	if( ret != DISP_CHANGE_SUCCESSFUL )
+	{
+		LOG->Warn("ChangeDisplaySettingsEx failed with error code: %d", ret);
 		return "Couldn't set screen mode";
+	}
 
 	g_FullScreenDevMode = DevMode;
 	return RString();
