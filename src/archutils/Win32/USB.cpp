@@ -14,6 +14,7 @@ extern "C" {
 }
 
 #include <vector>
+#include <memory>
 
 
 static RString GetUSBDevicePath( int iNum )
@@ -22,28 +23,32 @@ static RString GetUSBDevicePath( int iNum )
 	HidD_GetHidGuid( &guid );
 
 	HDEVINFO DeviceInfo = SetupDiGetClassDevs( &guid, nullptr, nullptr, (DIGCF_PRESENT | DIGCF_DEVICEINTERFACE) );
+	if (DeviceInfo == INVALID_HANDLE_VALUE)
+	{
+		return RString();
+	}
 
 	SP_DEVICE_INTERFACE_DATA DeviceInterface;
 	DeviceInterface.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
 
-	if( !SetupDiEnumDeviceInterfaces (DeviceInfo,
-		nullptr, &guid, iNum, &DeviceInterface) )
+	if (!SetupDiEnumDeviceInterfaces(DeviceInfo, nullptr, &guid, iNum, &DeviceInterface))
 	{
 		SetupDiDestroyDeviceInfoList( DeviceInfo );
 		return RString();
 	}
 
 	unsigned long iSize;
-	SetupDiGetDeviceInterfaceDetail( DeviceInfo, &DeviceInterface, nullptr, 0, &iSize, 0 );
+	SetupDiGetDeviceInterfaceDetail(DeviceInfo, &DeviceInterface, nullptr, 0, &iSize, nullptr);
 
-	PSP_INTERFACE_DEVICE_DETAIL_DATA DeviceDetail = (PSP_INTERFACE_DEVICE_DETAIL_DATA) malloc( iSize );
-	DeviceDetail->cbSize = sizeof(SP_INTERFACE_DEVICE_DETAIL_DATA);
+	std::vector<char> DeviceDetail(iSize);
+	auto pDeviceDetail = reinterpret_cast<PSP_INTERFACE_DEVICE_DETAIL_DATA>(DeviceDetail.data());
+	pDeviceDetail->cbSize = sizeof(SP_INTERFACE_DEVICE_DETAIL_DATA);
 
 	RString sRet;
-	if( SetupDiGetDeviceInterfaceDetail(DeviceInfo, &DeviceInterface,
-		DeviceDetail, iSize, &iSize, nullptr) )
-		sRet = DeviceDetail->DevicePath;
-	free( DeviceDetail );
+	if (SetupDiGetDeviceInterfaceDetail(DeviceInfo, &DeviceInterface, pDeviceDetail, iSize, &iSize, nullptr))
+	{
+		sRet = pDeviceDetail->DevicePath;
+	}
 
 	SetupDiDestroyDeviceInfoList( DeviceInfo );
 	return sRet;
@@ -56,11 +61,12 @@ bool USBDevice::Open( int iVID, int iPID, int iBlockSize, int iNum, void (*pfnIn
 	RString path;
 	while( (path = GetUSBDevicePath(iIndex++)) != "" )
 	{
-		HANDLE h = CreateFile( path, GENERIC_READ,
-			FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr );
+		HANDLE h = CreateFile(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
 
 		if( h == INVALID_HANDLE_VALUE )
+		{
 			continue;
+		}
 
 		HIDD_ATTRIBUTES attr;
 		if( !HidD_GetAttributes(h, &attr) )
@@ -83,11 +89,16 @@ bool USBDevice::Open( int iVID, int iPID, int iBlockSize, int iNum, void (*pfnIn
 			continue;
 		}
 
-		if( pfnInit )
-			pfnInit( h );
+		if (pfnInit)
+		{
+			pfnInit(h);
+		}
 		CloseHandle(h);
 
-		m_IO.Open( path, iBlockSize );
+		if (!m_IO.Open(path, iBlockSize))
+		{
+			return false;
+		}
 		return true;
 	}
 
@@ -103,46 +114,55 @@ bool USBDevice::IsOpen() const
 int USBDevice::GetPadEvent()
 {
 	if( !IsOpen() )
+	{
 		return -1;
+	}
 
 	long iBuf;
 	if( m_IO.read(&iBuf) <= 0 )
+	{
 		return -1;
+	}
 
 	return iBuf;
 }
 
 WindowsFileIO::WindowsFileIO()
+	: m_Handle(INVALID_HANDLE_VALUE), m_pBuffer(nullptr), m_iBlockSize(0)
 {
 	ZeroMemory( &m_Overlapped, sizeof(m_Overlapped) );
-	m_Handle = INVALID_HANDLE_VALUE;
-	m_pBuffer = nullptr;
 }
 
 WindowsFileIO::~WindowsFileIO()
 {
 	if( m_Handle != INVALID_HANDLE_VALUE )
-		CloseHandle( m_Handle );
+	{
+		CloseHandle(m_Handle);
+	}
 	delete[] m_pBuffer;
 }
 
 bool WindowsFileIO::Open( RString path, int iBlockSize )
 {
-	LOG->Trace( "WindowsFileIO::open(%s)", path.c_str() );
 	m_iBlockSize = iBlockSize;
 
 	if( m_pBuffer )
+	{
 		delete[] m_pBuffer;
+	}
 	m_pBuffer = new char[m_iBlockSize];
 
 	if( m_Handle != INVALID_HANDLE_VALUE )
-		CloseHandle( m_Handle );
+	{
+		CloseHandle(m_Handle);
+	}
 
-	m_Handle = CreateFile( path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
-		nullptr, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr );
+	m_Handle = CreateFile(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
 
 	if( m_Handle == INVALID_HANDLE_VALUE )
+	{
 		return false;
+	}
 
 	queue_read();
 
@@ -158,7 +178,6 @@ void WindowsFileIO::queue_read()
 
 int WindowsFileIO::finish_read( void *p )
 {
-	LOG->Trace( "this %p, %p", this, p );
 	/* We do; get the result.  It'll go into the original m_pBuffer
 	 * we supplied on the original call; that's why m_pBuffer is a
 	 * member instead of a local. */
@@ -166,7 +185,9 @@ int WindowsFileIO::finish_read( void *p )
 	int iRet = GetOverlappedResult( m_Handle, &m_Overlapped, &iCnt, FALSE );
 
 	if( iRet == 0 && (GetLastError() == ERROR_IO_PENDING || GetLastError() == ERROR_IO_INCOMPLETE) )
+	{
 		return -1;
+	}
 
 	queue_read();
 
@@ -182,32 +203,32 @@ int WindowsFileIO::finish_read( void *p )
 
 int WindowsFileIO::read( void *p )
 {
-	LOG->Trace( "WindowsFileIO::read()" );
-
 	/* See if we have a response for our request (which we may
 	 * have made on a previous call): */
 	if( WaitForSingleObjectEx(m_Handle, 0, TRUE) == WAIT_TIMEOUT )
+	{
 		return -1;
+	}
 
 	return finish_read(p);
 }
 
 int WindowsFileIO::read_several(const std::vector<WindowsFileIO *> &sources, void *p, int &actual, float timeout)
 {
-	HANDLE *Handles = new HANDLE[sources.size()];
-	for( unsigned i = 0; i < sources.size(); ++i )
+	std::vector<HANDLE> Handles(sources.size());
+	for (size_t i = 0; i < sources.size(); ++i)
+	{
 		Handles[i] = sources[i]->m_Handle;
+	}
 
-	int ret = WaitForMultipleObjectsEx( sources.size(), Handles, false, int(timeout * 1000), true);
-	delete[] Handles;
+	int ret = WaitForMultipleObjectsEx(static_cast<DWORD>(sources.size()), Handles.data(), false, static_cast<DWORD>(timeout * 1000), true);
 
 	if( ret == -1 )
 	{
-		LOG->Trace( werr_ssprintf(GetLastError(), "WaitForMultipleObjectsEx failed") );
 		return -1;
 	}
 
-	if( ret >= int(WAIT_OBJECT_0) && ret < int(WAIT_OBJECT_0+sources.size()) )
+	if (ret >= static_cast<int>(WAIT_OBJECT_0) && ret < static_cast<int>(WAIT_OBJECT_0 + sources.size()))
 	{
 		actual = ret - WAIT_OBJECT_0;
 		return sources[actual]->finish_read(p);
