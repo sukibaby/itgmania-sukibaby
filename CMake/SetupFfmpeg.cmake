@@ -37,17 +37,13 @@ if(MACOSX)
   list(APPEND FFMPEG_CONFIGURE "--enable-cross-compile")
   list(APPEND FFMPEG_CONFIGURE "--enable-videotoolbox")
   list(APPEND FFMPEG_CONFIGURE "--extra-cflags=-mmacosx-version-min=11")
-  if(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
-    list(APPEND FFMPEG_CONFIGURE "--arch=arm64" "--extra-cflags=-arch arm64" "--extra-ldflags=-arch arm64")
-  elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
-    list(APPEND FFMPEG_CONFIGURE "--arch=x86_64" "--extra-cflags=-arch x86_64" "--extra-ldflags=-arch x86_64")
-  elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64;x86_64" OR CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64;arm64")
-    list(APPEND FFMPEG_CONFIGURE "--arch=arm64,x86_64" "--extra-cflags=-arch arm64 -arch x86_64" "--extra-ldflags=-arch arm64 -arch x86_64")
-  else()
-    message(FATAL_ERROR
-      "Unsupported macOS architecture: ${CMAKE_OSX_ARCHITECTURES}, set CMAKE_OSX_ARCHITECTURES to either arm64 or x86_64"
-    )
-  endif()
+  list(APPEND FFMPEG_CONFIGURE "--extra-ldflags=-mmacosx-version-min=11")
+
+  set(FFMPEG_CONFIGURE_ARM64 ${FFMPEG_CONFIGURE})
+  list(APPEND FFMPEG_CONFIGURE_ARM64 "--arch=arm64" "--extra-cflags=-arch arm64" "--extra-ldflags=-arch arm64")
+
+  set(FFMPEG_CONFIGURE_X86_64 ${FFMPEG_CONFIGURE})
+  list(APPEND FFMPEG_CONFIGURE_X86_64 "--arch=x86_64" "--extra-cflags=-arch x86_64" "--extra-ldflags=-arch x86_64")
 endif()
 
 if(NOT WITH_EXTERNAL_WARNINGS)
@@ -60,14 +56,31 @@ if(WITH_FFMPEG_JOBS GREATER 0)
 endif()
 list(APPEND SM_FFMPEG_MAKE "&&" "make" "DESTDIR=./dest" "install")
 
-externalproject_add("ffmpeg"
+# Build for arm64
+externalproject_add("ffmpeg_arm64"
                     SOURCE_DIR "${SM_FFMPEG_SRC_DIR}"
-                    CONFIGURE_COMMAND ${FFMPEG_CONFIGURE}
+                    CONFIGURE_COMMAND ${FFMPEG_CONFIGURE_ARM64}
                     BUILD_COMMAND "${SM_FFMPEG_MAKE}"
                     UPDATE_COMMAND ""
                     INSTALL_COMMAND ""
                     TEST_COMMAND "")
 
-externalproject_get_property("ffmpeg" BINARY_DIR)
+# Build for x86_64
+externalproject_add("ffmpeg_x86_64"
+                    SOURCE_DIR "${SM_FFMPEG_SRC_DIR}"
+                    CONFIGURE_COMMAND ${FFMPEG_CONFIGURE_X86_64}
+                    BUILD_COMMAND "${SM_FFMPEG_MAKE}"
+                    UPDATE_COMMAND ""
+                    INSTALL_COMMAND ""
+                    TEST_COMMAND "")
+
+# Combine the binaries using lipo
+add_custom_command(TARGET ffmpeg_arm64 POST_BUILD
+                   COMMAND lipo -create
+                   ${BINARY_DIR}/dest_arm64/lib/libffmpeg.a
+                   ${BINARY_DIR}/dest_x86_64/lib/libffmpeg.a
+                   -output ${BINARY_DIR}/dest/lib/libffmpeg.a)
+
+externalproject_get_property("ffmpeg_arm64" BINARY_DIR)
 set(SM_FFMPEG_LIB ${BINARY_DIR}/dest/lib)
 set(SM_FFMPEG_INCLUDE ${BINARY_DIR}/dest/include)
