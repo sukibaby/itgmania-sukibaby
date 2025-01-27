@@ -143,27 +143,6 @@ bool RageSoundReader_Merge::SetProperty( const RString &sProperty, float fValue 
 	return bRet;
 }
 
-/*
- * If the audio position drifts apart further than ERROR_CORRECTION_THRESHOLD frames,
- * attempt to resync it.
- *
- * Frames are expressed as whole numbers, and the ratio between source and stream frames
- * is floating point.  We can't read a specific number of source frames, only stream
- * frames.  If a stream is early by 15 source frames, we'll convert that to stream
- * frames for reading; this rounds back to an integer, so it isn't exact.  (The amount
- * of error should be no more than the ratio; if we have a ratio of 10, then reading
- * 10 stream frames should advance the stream by 100-110 frames.  The ratio is normally
- * less than 5.)
- *
- * ERROR_CORRECTION_THRESHOLD should be greater than the maximum rate in use, so we
- * can always resync the stream back to within the tolerance of the threshold.
- *
- * In the pathological case, if this is too low we may never resync properly, each
- * attempt to resync leapfrogging past the previous.
- */
-
-static const int ERROR_CORRECTION_THRESHOLD = 8;
-
 int RageSoundReader_Merge::Read(float* pBuffer, int iFrames)
 {
 	if (m_aSounds.empty())
