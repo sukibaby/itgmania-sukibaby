@@ -260,7 +260,7 @@ int RageSoundReader_Merge::Read( float *pBuffer, int iFrames )
 				break;
 			}
 
-			mix.SetWriteOffset( iFramesRead * pSound->GetNumChannels() );
+			mix.set_write_offset( iFramesRead * pSound->GetNumChannels() );
 			mix.write( Buffer, iGotFrames * pSound->GetNumChannels() );
 			iFramesRead += iGotFrames;
 

@@ -139,7 +139,7 @@ RageSoundMixBuffer &RageSoundDriver::MixIntoBuffer( int iFrames, int64_t iFrameN
 
 			/* Note that, until we call advance_read_pointer, we can safely write to p[0]. */
 			const int frames_to_read = std::min( iFramesLeft, p[0]->m_FramesInBuffer );
-			mix.SetWriteOffset( iGotFrames*channels );
+			mix.set_write_offset( iGotFrames*channels );
 			mix.write( p[0]->m_BufferNext, frames_to_read * channels );
 
 			{

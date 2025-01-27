@@ -6,30 +6,29 @@
 #include <cstdint>
 #include <vector>
 
-class RageSoundMixBuffer
-{
+class RageSoundMixBuffer {
 public:
 	RageSoundMixBuffer();
 	~RageSoundMixBuffer();
 
 	/* Mix the given buffer of samples. */
-	void write(const float* pBuf, int64_t iSize, int iSourceStride = 1, int iDestStride = 1);
+	void write(const float* buf, std::int64_t size, int source_stride = 1, int dest_stride = 1);
 
 	/* Extend the buffer as if write() was called with a buffer of silence. */
-	void Extend(std::int64_t iSamples);
+	void extend(std::int64_t samples);
 
-	void read(std::int16_t* pBuf);
-	void read(float* pBuf);
-	void read_deinterlace(float** pBufs, int channels);
-	float* read() { return m_pMixbuf.data(); }
-	std::int64_t size() const { return m_iBufUsed; }
-	void SetWriteOffset(int iOffset);
+	void read(std::int16_t* buf);
+	void read(float* buf);
+	void read_deinterlace(float** bufs, int channels);
+	float* read() { return mixbuf_.data(); }
+	std::int64_t size() const { return buf_used_; }
+	void set_write_offset(int offset);
 
 private:
-	std::vector<float> m_pMixbuf;
-	std::int64_t m_iBufSize; /* actual allocated samples */
-	std::int64_t m_iBufUsed; /* used samples */
-	int m_iOffset;
+	std::vector<float> mixbuf_;
+	std::int64_t buf_size_; /* actual allocated samples */
+	std::int64_t buf_used_; /* used samples */
+	int offset_;
 };
 
 #endif
