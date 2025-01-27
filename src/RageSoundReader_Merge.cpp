@@ -165,7 +165,7 @@ static int Difference( int a, int b ) { return std::abs( a - b ); }
  * attempt to resync leapfrogging past the previous.
  */
 
-static const int ERROR_CORRECTION_THRESHOLD = 16;
+static const int ERROR_CORRECTION_THRESHOLD = 28;
 
 /* As we iterate through the sound tree, we'll find that we need data from different
  * sounds; a sound may be needed by more than one other sound. */
