@@ -154,7 +154,6 @@ source_group("Rage\\\\File"
 list(APPEND SMDATA_RAGE_SOUND_SRC
             "RageSound.cpp"
             "RageSoundManager.cpp"
-            "RageSoundMixBuffer.cpp"
             "RageSoundPosMap.cpp"
             "RageSoundReader.cpp"
             "RageSoundReader_Chain.cpp"
@@ -177,7 +176,6 @@ list(APPEND SMDATA_RAGE_SOUND_SRC
 list(APPEND SMDATA_RAGE_SOUND_HPP
             "RageSound.h"
             "RageSoundManager.h"
-            "RageSoundMixBuffer.h"
             "RageSoundPosMap.h"
             "RageSoundReader.h"
             "RageSoundReader_Chain.h"

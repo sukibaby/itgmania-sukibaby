@@ -11,7 +11,6 @@
 
 class RageSoundBase;
 class RageTimer;
-class RageSoundMixBuffer;
 static const int samples_per_block = 512;
 
 class RageSoundDriver: public RageDriver
@@ -209,7 +208,7 @@ private:
 
 	static int DecodeThread_start( void *p );
 	void DecodeThread();
-	RageSoundMixBuffer &MixIntoBuffer( int iFrames, int64_t iFrameNumber, int64_t iCurrentFrame );
+	std::vector<float> RageSoundDriver::MixIntoBuffer(int iFrames, int64_t iFrameNumber, int64_t iCurrentFrame);
 	RageThread m_DecodeThread;
 
 	int GetDataForSound( Sound &s );

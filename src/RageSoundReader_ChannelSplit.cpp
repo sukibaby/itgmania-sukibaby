@@ -36,7 +36,6 @@
 #include "RageSoundReader_ChannelSplit.h"
 #include "RageLog.h"
 #include "RageUtil.h"
-#include "RageSoundMixBuffer.h"
 #include "RageSoundUtil.h"
 
 #include <climits>
@@ -135,14 +134,14 @@ bool RageSoundReader_Split::SetProperty( const RString &sProperty, float fValue 
 	return m_pImpl->m_pSource->SetProperty( sProperty, fValue );
 }
 
-int RageSoundReader_Split::Read( float *pBuf, int iFrames )
+int RageSoundReader_Split::Read(float* pBuf, int iFrames)
 {
 	m_iRequestFrames = iFrames;
 	int iRet = m_pImpl->ReadBuffer();
 
 	int iSamplesAvailable = m_pImpl->m_sBuffer.size();
-	const float *pSrc = &m_pImpl->m_sBuffer[0];
-	if( m_pImpl->m_iBufferPositionFrames < m_iPositionFrame )
+	const float* pSrc = &m_pImpl->m_sBuffer[0];
+	if (m_pImpl->m_iBufferPositionFrames < m_iPositionFrame)
 	{
 		int iSkipFrames = m_iPositionFrame - m_pImpl->m_iBufferPositionFrames;
 		int iSkipSamples = iSkipFrames * m_pImpl->m_pSource->GetNumChannels();
@@ -153,29 +152,25 @@ int RageSoundReader_Split::Read( float *pBuf, int iFrames )
 	int iFramesWanted = iFrames;
 	int iFramesAvailable = iSamplesAvailable / (m_pImpl->m_pSource->GetNumChannels());
 
-	/* Report any errors from Read() if we don't have any data buffered to
-	 * return.  If we do have data, finish returning it first. */
-	if( iFramesAvailable == 0 && iRet < 0 )
+	if (iFramesAvailable == 0 && iRet < 0)
 		return iRet;
 
-	iFramesAvailable = std::min( iFramesAvailable, iFramesWanted );
+	iFramesAvailable = std::min(iFramesAvailable, iFramesWanted);
 
+	std::vector<float> mixBuffer(iFramesAvailable * m_iNumOutputChannels, 0.0f);
+	for (int i = 0; i < (int)m_aChannels.size(); ++i)
 	{
-		RageSoundMixBuffer mix;
-		for( int i = 0; i < (int) m_aChannels.size(); ++i )
+		const ChannelMap& chan = m_aChannels[i];
+		for (int j = 0; j < iFramesAvailable; ++j)
 		{
-			const ChannelMap &chan = m_aChannels[i];
-			mix.SetWriteOffset( chan.m_iToChannel );
-			mix.write( pSrc + chan.m_iFromChannel, iFramesAvailable, m_pImpl->m_pSource->GetNumChannels(), m_iNumOutputChannels );
+			mixBuffer[j * m_iNumOutputChannels + chan.m_iToChannel] += pSrc[j * m_pImpl->m_pSource->GetNumChannels() + chan.m_iFromChannel];
 		}
-
-		mix.read( pBuf );
 	}
+
+	std::memcpy(pBuf, mixBuffer.data(), iFramesAvailable * m_iNumOutputChannels * sizeof(float));
 
 	m_iPositionFrame += iFramesAvailable;
 
-	/* We no longer need the data we requested.  Clear our request, so the
-	 * memory can be freed. */
 	m_iRequestFrames = 0;
 	m_pImpl->ReadBuffer();
 	return iFramesAvailable;

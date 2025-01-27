@@ -4,7 +4,6 @@
 #include "RageLog.h"
 #include "RageSound.h"
 #include "RageUtil.h"
-#include "RageSoundMixBuffer.h"
 #include "RageSoundReader.h"
 
 #include <cmath>
@@ -59,9 +58,9 @@ int RageSoundDriver::DecodeThread_start( void *p )
 static int64_t g_iTotalAhead = 0;
 static int g_iTotalAheadCount = 0;
 
-RageSoundMixBuffer &RageSoundDriver::MixIntoBuffer( int iFrames, int64_t iFrameNumber, int64_t iCurrentFrame )
+std::vector<float> RageSoundDriver::MixIntoBuffer(int iFrames, int64_t iFrameNumber, int64_t iCurrentFrame)
 {
-	ASSERT_M( m_DecodeThread.IsCreated(), "RageSoundDriver::StartDecodeThread() was never called" );
+	ASSERT_M(m_DecodeThread.IsCreated(), "RageSoundDriver::StartDecodeThread() was never called");
 
 	int64_t frameDifference = iFrameNumber - iCurrentFrame + static_cast<int64_t>(iFrames);
 	if (frameDifference > 0)
@@ -70,123 +69,124 @@ RageSoundMixBuffer &RageSoundDriver::MixIntoBuffer( int iFrames, int64_t iFrameN
 		++g_iTotalAheadCount;
 	}
 
-	static RageSoundMixBuffer mix;
+	std::vector<float> mixBuffer(iFrames * channels, 0.0f);
 
-	for( unsigned i = 0; i < ARRAYLEN(m_Sounds); ++i )
+	for (unsigned i = 0; i < ARRAYLEN(m_Sounds); ++i)
 	{
-		/* s.m_pSound can not safely be accessed from here. */
-		Sound &s = m_Sounds[i];
-		if( s.m_State == Sound::HALTING )
+		Sound& s = m_Sounds[i];
+		if (s.m_State == Sound::HALTING)
 		{
-			/* This indicates that this stream can be reused. */
 			s.m_bPaused = false;
 			s.m_State = Sound::STOPPED;
-
-//			LOG->Trace("set %p from HALTING to STOPPED", m_Sounds[i].m_pSound);
 			continue;
 		}
 
-		if( s.m_State != Sound::STOPPING && s.m_State != Sound::PLAYING )
+		if (s.m_State != Sound::STOPPING && s.m_State != Sound::PLAYING)
 			continue;
 
-		/* STOPPING or PLAYING.  Read sound data. */
-		if( m_Sounds[i].m_bPaused )
+		if (s.m_bPaused)
 			continue;
 
 		int iGotFrames = 0;
 		int iFramesLeft = iFrames;
 
-		/* Does the sound have a start time? */
-		if( !s.m_StartTime.IsZero() && iCurrentFrame != -1 )
+		if (!s.m_StartTime.IsZero() && iCurrentFrame != -1)
 		{
-			/* If the sound is supposed to start at a time past this buffer, insert silence. */
 			const int64_t iFramesUntilThisBuffer = iFrameNumber - iCurrentFrame;
 			const float fSecondsBeforeStart = -s.m_StartTime.Ago();
 			const int64_t iFramesBeforeStart = int64_t(fSecondsBeforeStart * GetSampleRate());
-			const int iSilentFramesInThisBuffer = std::clamp( int(iFramesBeforeStart-iFramesUntilThisBuffer), 0, iFramesLeft );
+			const int iSilentFramesInThisBuffer = std::clamp(int(iFramesBeforeStart - iFramesUntilThisBuffer), 0, iFramesLeft);
 
 			iGotFrames += iSilentFramesInThisBuffer;
 			iFramesLeft -= iSilentFramesInThisBuffer;
 
-			/* If we didn't completely fill the buffer, then we've written all of the silence. */
-			if( iFramesLeft )
+			if (iFramesLeft)
 				s.m_StartTime.SetZero();
 		}
 
-		/* Fill actual data. */
-		sound_block *p[2];
+		sound_block* p[2];
 		unsigned pSize[2];
-		s.m_Buffer.get_read_pointers( p, pSize );
+		s.m_Buffer.get_read_pointers(p, pSize);
 
-		while( iFramesLeft && pSize[0] )
+		while (iFramesLeft && pSize[0])
 		{
-			if( !p[0]->m_FramesInBuffer )
+			if (!p[0]->m_FramesInBuffer)
 			{
-				/* We've processed all of the sound in this block.  Mark it read. */
-				s.m_Buffer.advance_read_pointer( 1 );
+				s.m_Buffer.advance_read_pointer(1);
 				++p[0];
 				--pSize[0];
 
-				/* If we have more data in p[0], keep going. */
-				if( pSize[0] )
-					continue; // more data
+				if (pSize[0])
+					continue;
 
-				/* We've used up p[0].  Try p[1]. */
-				std::swap( p[0], p[1] );
-				std::swap( pSize[0], pSize[1] );
+				std::swap(p[0], p[1]);
+				std::swap(pSize[0], pSize[1]);
 				continue;
 			}
 
-			/* Note that, until we call advance_read_pointer, we can safely write to p[0]. */
-			const int frames_to_read = std::min( iFramesLeft, p[0]->m_FramesInBuffer );
-			mix.SetWriteOffset( iGotFrames*channels );
-			mix.write( p[0]->m_BufferNext, frames_to_read * channels );
+			const int frames_to_read = std::min(iFramesLeft, p[0]->m_FramesInBuffer);
+			for (int j = 0; j < frames_to_read * channels; ++j)
+			{
+				mixBuffer[iGotFrames * channels + j] += p[0]->m_BufferNext[j];
+			}
 
 			{
 				Sound::QueuedPosMap pos;
-				pos.iStreamFrame = iFrameNumber+iGotFrames;
+				pos.iStreamFrame = iFrameNumber + iGotFrames;
 				pos.iHardwareFrame = p[0]->m_iPosition;
 				pos.iFrames = frames_to_read;
 
-				s.m_PosMapQueue.write( &pos, 1 );
+				s.m_PosMapQueue.write(&pos, 1);
 			}
 
-			p[0]->m_BufferNext += frames_to_read*channels;
+			p[0]->m_BufferNext += frames_to_read * channels;
 			p[0]->m_FramesInBuffer -= frames_to_read;
 			p[0]->m_iPosition += frames_to_read;
-
-//			LOG->Trace( "incr fr rd += %i (state %i) (%p)",
-//				(int) frames_to_read, s.m_State, s.m_pSound );
 
 			iGotFrames += frames_to_read;
 			iFramesLeft -= frames_to_read;
 		}
 
-		/* If we don't have enough to fill the buffer, we've underrun. */
-		if( iGotFrames < iFrames && s.m_State == Sound::PLAYING )
+		if (iGotFrames < iFrames && s.m_State == Sound::PLAYING)
 			++underruns;
 	}
 
-	return mix;
+	return mixBuffer;
 }
 
-void RageSoundDriver::Mix( int16_t *pBuf, int iFrames, int64_t iFrameNumber, int64_t iCurrentFrame )
+void RageSoundDriver::Mix(int16_t* pBuf, int iFrames, int64_t iFrameNumber, int64_t iCurrentFrame)
 {
-	memset( pBuf, 0, iFrames*channels*sizeof(int16_t) );
-	MixIntoBuffer( iFrames, iFrameNumber, iCurrentFrame ).read( pBuf );
+	memset(pBuf, 0, iFrames * channels * sizeof(int16_t));
+	std::vector<float> mixBuffer = MixIntoBuffer(iFrames, iFrameNumber, iCurrentFrame);
+
+	for (int i = 0; i < iFrames * channels; ++i)
+	{
+		pBuf[i] = static_cast<int16_t>(std::clamp(mixBuffer[i], -32768.0f, 32767.0f));
+	}
 }
 
-void RageSoundDriver::Mix( float *pBuf, int iFrames, int64_t iFrameNumber, int64_t iCurrentFrame )
+void RageSoundDriver::Mix(float* pBuf, int iFrames, int64_t iFrameNumber, int64_t iCurrentFrame)
 {
-	memset( pBuf, 0, iFrames*channels*sizeof(float) );
-	MixIntoBuffer( iFrames, iFrameNumber, iCurrentFrame ).read( pBuf );
+	memset(pBuf, 0, iFrames * channels * sizeof(float));
+	std::vector<float> mixBuffer = MixIntoBuffer(iFrames, iFrameNumber, iCurrentFrame);
+
+	std::memcpy(pBuf, mixBuffer.data(), iFrames * channels * sizeof(float));
 }
 
-void RageSoundDriver::MixDeinterlaced( float **pBufs, int iChannels, int iFrames, int64_t iFrameNumber, int64_t iCurrentFrame )
+void RageSoundDriver::MixDeinterlaced(float** pBufs, int iChannels, int iFrames, int64_t iFrameNumber, int64_t iCurrentFrame)
 {
-	for (int i = 0; i < iChannels; ++i )
-		memset( pBufs[i], 0, iFrames*sizeof(float) );
-	MixIntoBuffer( iFrames, iFrameNumber, iCurrentFrame ).read_deinterlace( pBufs, iChannels );
+	for (int i = 0; i < iChannels; ++i)
+		memset(pBufs[i], 0, iFrames * sizeof(float));
+
+	std::vector<float> mixBuffer = MixIntoBuffer(iFrames, iFrameNumber, iCurrentFrame);
+
+	for (int i = 0; i < iFrames; ++i)
+	{
+		for (int ch = 0; ch < iChannels; ++ch)
+		{
+			pBufs[ch][i] = mixBuffer[i * iChannels + ch];
+		}
+	}
 }
 
 void RageSoundDriver::DecodeThread()
