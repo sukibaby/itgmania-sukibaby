@@ -14,8 +14,8 @@ RageSoundMixBuffer::RageSoundMixBuffer() {
 RageSoundMixBuffer::~RageSoundMixBuffer() {
 }
 
-void RageSoundMixBuffer::extend(std::int64_t samples) {
-	const std::int64_t realsize = samples + offset_;
+void RageSoundMixBuffer::extend(int64_t samples) {
+	const int64_t realsize = samples + offset_;
 	if (buf_size_ < realsize) {
 		mixbuf_.resize(realsize);
 		buf_size_ = realsize;
@@ -27,7 +27,7 @@ void RageSoundMixBuffer::extend(std::int64_t samples) {
 	}
 }
 
-void RageSoundMixBuffer::write(const float* buf, std::int64_t size, int source_stride, int dest_stride) {
+void RageSoundMixBuffer::write(const float* buf, int64_t size, int source_stride, int dest_stride) {
 	if (size == 0)
 		return;
 
@@ -46,8 +46,8 @@ void RageSoundMixBuffer::write(const float* buf, std::int64_t size, int source_s
 	}
 }
 
-void RageSoundMixBuffer::read(std::int16_t* buf) {
-	for (std::int64_t pos = 0; pos < buf_used_; ++pos) {
+void RageSoundMixBuffer::read(int16_t* buf) {
+	for (int64_t pos = 0; pos < buf_used_; ++pos) {
 		float out = mixbuf_[pos];
 		out = std::clamp(out, -1.0f, +1.0f);
 		buf[pos] = std::lrint(out * INT16_MAX);
@@ -61,7 +61,7 @@ void RageSoundMixBuffer::read(float* buf) {
 }
 
 void RageSoundMixBuffer::read_deinterlace(float** bufs, int channels) {
-	for (std::int64_t i = 0; i < buf_used_ / channels; ++i) {
+	for (int64_t i = 0; i < buf_used_ / channels; ++i) {
 		for (int ch = 0; ch < channels; ++ch) {
 			bufs[ch][i] = mixbuf_[channels * i + ch];
 		}

@@ -12,17 +12,17 @@ public:
 	~RageSoundMixBuffer();
 
 	/* Mix the given buffer of samples. */
-	void write(const float* buf, std::int64_t size, int source_stride = 1, int dest_stride = 1);
+	void write(const float* buf, int64_t size, int source_stride = 1, int dest_stride = 1);
 
 	/* Extend the buffer as if write() was called with a buffer of silence. */
-	void extend(std::int64_t samples);
+	void extend(int64_t samples);
 
-	void read(std::int16_t* buf);
+	void read(int16_t* buf);
 	void read(float* buf);
 	void read_deinterlace(float** bufs, int channels);
 
 	inline float* read() { return mixbuf_.data(); }
-	inline std::int64_t size() const { return buf_used_; }
+	inline int64_t size() const { return buf_used_; }
 
 	/* write() will start mixing offset samples into the buffer.  Be careful; this is
 	 * measured in samples, not frames, so if the data is stereo, multiply by two. */
@@ -30,8 +30,8 @@ public:
 
 private:
 	std::vector<float> mixbuf_;
-	std::int64_t buf_size_; /* actual allocated samples */
-	std::int64_t buf_used_; /* used samples */
+	int64_t buf_size_; /* actual allocated samples */
+	int64_t buf_used_; /* used samples */
 	int offset_;
 };
 
