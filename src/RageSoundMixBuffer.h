@@ -4,34 +4,35 @@
 #define RAGE_SOUND_MIX_BUFFER_H
 
 #include <cstdint>
+#include <vector>
 
-class RageSoundMixBuffer
-{
+class RageSoundMixBuffer {
 public:
 	RageSoundMixBuffer();
 	~RageSoundMixBuffer();
 
-	// See how many samples we can stuff into 2MB.
-	static constexpr size_t BUF_SIZE = 2 * 1024 * 1024 / sizeof(float);
+	/* Mix the given buffer of samples. */
+	void write(const float* buf, int64_t size, int source_stride = 1, int dest_stride = 1);
 
-	// Mix the given buffer of samples.
-	void write( const float *pBuf, unsigned iSize, int iSourceStride = 1, int iDestStride = 1 );
+	/* Extend the buffer as if write() was called with a buffer of silence. */
+	void extend(int64_t samples);
 
-	// Extend the buffer as if write() was called with a buffer of silence.
-	void Extend( unsigned iSamples );
+	void read(int16_t* buf);
+	void read(float* buf);
+	void read_deinterlace(float** bufs, int channels);
 
-	void read( int16_t *pBuf );
-	void read( float *pBuf );
-	void read_deinterlace( float **pBufs, int channels );
-	float *read() { return m_pMixbuf; }
-	unsigned size() const { return m_iBufUsed; }
-	void SetWriteOffset( int iOffset );
+	inline float* read() { return mixbuf_.data(); }
+	inline int64_t size() const { return buf_used_; }
+
+	/* write() will start mixing offset samples into the buffer.  Be careful; this is
+	 * measured in samples, not frames, so if the data is stereo, multiply by two. */
+	inline void SetWriteOffset(int offset) { offset_ = offset; }
 
 private:
-	float *m_pMixbuf;
-	uint64_t m_iBufSize; // actual allocated samples
-	uint64_t m_iBufUsed; // used samples
-	int m_iOffset;
+	std::vector<float> mixbuf_;
+	int64_t buf_size_; /* actual allocated samples */
+	int64_t buf_used_; /* used samples */
+	int offset_;
 };
 
 #endif
