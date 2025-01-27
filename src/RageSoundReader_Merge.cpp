@@ -165,14 +165,16 @@ static int Difference( int a, int b ) { return std::abs( a - b ); }
  * attempt to resync leapfrogging past the previous.
  */
 
-static const int ERROR_CORRECTION_THRESHOLD = 28;
+static const int ERROR_CORRECTION_THRESHOLD = 8;
 
 /* As we iterate through the sound tree, we'll find that we need data from different
  * sounds; a sound may be needed by more than one other sound. */
 int RageSoundReader_Merge::Read( float *pBuffer, int iFrames )
 {
 	if( m_aSounds.empty() )
+	{
 		return END_OF_FILE;
+	}
 
 	/*
 	 * All sounds which are active should stay aligned; each GetNextSourceFrame should not
@@ -223,7 +225,9 @@ int RageSoundReader_Merge::Read( float *pBuffer, int iFrames )
 		RageSoundReader *pSound = m_aSounds.front();
 		iFrames = pSound->Read( pBuffer, iFrames );
 		if( iFrames > 0 )
+		{
 			m_iNextSourceFrame += static_cast<int>((iFrames * m_fCurrentStreamToSourceRatio) + 0.5);
+		}
 		return iFrames;
 	}
 
@@ -256,7 +260,9 @@ int RageSoundReader_Merge::Read( float *pBuffer, int iFrames )
 			if( iGotFrames < 0 )
 			{
 				if( i == 0 )
+				{
 					return iGotFrames;
+				}
 				break;
 			}
 
@@ -265,7 +271,9 @@ int RageSoundReader_Merge::Read( float *pBuffer, int iFrames )
 			iFramesRead += iGotFrames;
 
 			if( Difference(aRatios[i], m_fCurrentStreamToSourceRatio) > 0.001f )
+			{
 				break;
+			}
 		}
 	}
 

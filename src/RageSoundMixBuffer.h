@@ -20,9 +20,13 @@ public:
 	void read(std::int16_t* buf);
 	void read(float* buf);
 	void read_deinterlace(float** bufs, int channels);
-	float* read() { return mixbuf_.data(); }
-	std::int64_t size() const { return buf_used_; }
-	void set_write_offset(int offset);
+
+	inline float* read() { return mixbuf_.data(); }
+	inline std::int64_t size() const { return buf_used_; }
+
+	/* write() will start mixing offset samples into the buffer.  Be careful; this is
+	 * measured in samples, not frames, so if the data is stereo, multiply by two. */
+	inline void set_write_offset(int offset) { offset_ = offset; }
 
 private:
 	std::vector<float> mixbuf_;

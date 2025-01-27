@@ -14,12 +14,6 @@ RageSoundMixBuffer::RageSoundMixBuffer() {
 RageSoundMixBuffer::~RageSoundMixBuffer() {
 }
 
-/* write() will start mixing offset samples into the buffer.  Be careful; this is
- * measured in samples, not frames, so if the data is stereo, multiply by two. */
-void RageSoundMixBuffer::set_write_offset(int offset) {
-	offset_ = offset;
-}
-
 void RageSoundMixBuffer::extend(std::int64_t samples) {
 	const std::int64_t realsize = samples + offset_;
 	if (buf_size_ < realsize) {
