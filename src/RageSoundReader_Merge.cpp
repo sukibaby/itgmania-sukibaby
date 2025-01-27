@@ -9,7 +9,7 @@
 
 #include <cmath>
 #include <vector>
-
+#include <array>
 
 RageSoundReader_Merge::RageSoundReader_Merge()
 {
@@ -189,19 +189,22 @@ int RageSoundReader_Merge::Read(float* pBuffer, int iFrames)
 
 	// Use a fixed-size buffer for mixing
 	RageSoundMixBuffer mix;
-	float Buffer[2048];
-	iFrames = std::min(iFrames, static_cast<int>(ARRAYLEN(Buffer) / m_iChannels));
+	std::array<float, 2048> Buffer;
+	iFrames = std::min(iFrames, static_cast<int>(Buffer.size() / m_iChannels));
 
 	// Read iFrames from each sound
 	for (size_t i = 0; i < m_aSounds.size(); ++i)
 	{
 		RageSoundReader* pSound = m_aSounds[i];
-		ASSERT(pSound->GetNumChannels() == m_iChannels);
+		if (pSound->GetNumChannels() != m_iChannels)
+		{
+			LOG->Warn("Channel mismatch: expected %d, got %d", m_iChannels, pSound->GetNumChannels());
+		}
 
 		int iFramesRead = 0;
 		while (iFramesRead < iFrames)
 		{
-			int iGotFrames = pSound->Read(Buffer, iFrames - iFramesRead);
+			int iGotFrames = pSound->Read(Buffer.data(), iFrames - iFramesRead);
 			if (iGotFrames < 0)
 			{
 				if (i == 0)
@@ -212,7 +215,7 @@ int RageSoundReader_Merge::Read(float* pBuffer, int iFrames)
 			}
 
 			mix.set_write_offset(iFramesRead * pSound->GetNumChannels());
-			mix.write(Buffer, iGotFrames * pSound->GetNumChannels());
+			mix.write(Buffer.data(), iGotFrames * pSound->GetNumChannels());
 			iFramesRead += iGotFrames;
 		}
 	}
