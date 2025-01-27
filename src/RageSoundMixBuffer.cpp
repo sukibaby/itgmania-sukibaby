@@ -7,9 +7,18 @@
 #include <cstdint>
 #include <cstdlib>
 
-static size_t size_in_bytes_ = 282240;
+static size_t size_in_bytes_ = 70560;
+
+static void GetBufferSizeFromPreference() {
+	size_in_bytes_ = static_cast<size_t>(PREFSMAN->m_AudioBufferSize.Get());
+	if (size_in_bytes_ < 4409) {
+		LOG->Warn("The value of AudioBufferSize is too small (%zu) - changing the buffer size to 4410.", size_in_bytes_);
+		size_in_bytes_ = 4410;
+	}
+}
 
 RageSoundMixBuffer::RageSoundMixBuffer() {
+	GetBufferSizeFromPreference();
 	LOG->Info("Audio mix buffer size: %.1f seconds @ 44.1kHz (%zu bytes)", static_cast<float>(size_in_bytes_) / (44100.0f * sizeof(float)), size_in_bytes_);
 	m_iBufSize = size_in_bytes_;
 	m_iBufUsed = 0;
@@ -53,6 +62,30 @@ void RageSoundMixBuffer::write( const float *pBuf, unsigned iSize, int iSourceSt
 		pDestBuf += iDestStride;
 		--iSize;
 	}
+}
+
+/*
+ * Example usage:
+ * rsmb.Reinitialize(); // No argument, calls GetBufferSizeFromPreference()
+ * rsmb.Reinitialize(17640); // With arugment, updates size_in_bytes_ to be 17640
+ */
+void RageSoundMixBuffer::Reinitialize(unsigned new_size = 0) {
+	// Check if we were given a buffer size
+	size_in_bytes_ = (new_size > 0) ? new_size : size_in_bytes_;
+	if (new_size == 0) { GetBufferSizeFromPreference(); }
+	// Set up the temporary buffer, switch, & free old memory
+	float* temp_buf = static_cast<float*>(std::malloc(size_in_bytes_));
+	if (!(temp_buf)) {
+		FailWithMessage("Failed to allocate memory for the audio mix buffer");
+	}
+	std::memset(temp_buf, 0, size_in_bytes_);
+	float* old_buf = m_pMixbuf;
+	m_pMixbuf = temp_buf;
+	m_iBufSize = size_in_bytes_;
+	m_iBufUsed = 0;
+	m_iOffset = 0;
+	std::free(old_buf);
+	LOG->Info("Audio mix buffer size: %.1f seconds @ 44.1kHz (%zu bytes)", static_cast<float>(size_in_bytes_) / (44100.0f * sizeof(float)), size_in_bytes_);
 }
 
 void RageSoundMixBuffer::read_deinterlace( float **pBufs, int channels ) noexcept {
