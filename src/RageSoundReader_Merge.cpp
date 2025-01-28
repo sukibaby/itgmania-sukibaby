@@ -143,13 +143,16 @@ bool RageSoundReader_Merge::SetProperty( const RString &sProperty, float fValue 
 	return bRet;
 }
 
-int RageSoundReader_Merge::Read(float* pBuffer, int iFrames)
+/* As we iterate through the sound tree, we'll find that we need data from different
+ * sounds; a sound may be needed by more than one other sound. */
+int RageSoundReader_Merge::Read( float *pBuffer, int iFrames )
 {
-	if (m_aSounds.empty())
+	if( m_aSounds.empty() )
 	{
 		return END_OF_FILE;
 	}
 
+	// All sounds which are active should stay aligned; each GetNextSourceFrame should not come out of sync.
 	int iEarliestSound = 0;
 	int iMinPosition = m_aSounds[0]->GetNextSourceFrame();
 	float fMinRatio = m_aSounds[0]->GetStreamToSourceRatio();
@@ -159,6 +162,7 @@ int RageSoundReader_Merge::Read(float* pBuffer, int iFrames)
 		int iNextSourceFrame = m_aSounds[i]->GetNextSourceFrame();
 		float fRatio = m_aSounds[i]->GetStreamToSourceRatio();
 
+		// Find the earliest NextSourceFrame in the m_aSounds vector.
 		if (iNextSourceFrame < iMinPosition)
 		{
 			iMinPosition = iNextSourceFrame;
@@ -176,13 +180,13 @@ int RageSoundReader_Merge::Read(float* pBuffer, int iFrames)
 	}
 
 	// Read directly if there's only one sound
-	if (m_aSounds.size() == 1)
+	if( m_aSounds.size() == 1 )
 	{
-		RageSoundReader* pSound = m_aSounds.front();
-		iFrames = pSound->Read(pBuffer, iFrames);
-		if (iFrames > 0)
+		RageSoundReader *pSound = m_aSounds.front();
+		iFrames = pSound->Read( pBuffer, iFrames );
+		if( iFrames > 0 )
 		{
-			m_iNextSourceFrame += static_cast<int>((iFrames * m_fCurrentStreamToSourceRatio) + 0.5);
+			m_iNextSourceFrame += static_cast<int>((iFrames * m_fCurrentStreamToSourceRatio) + 0.5 );
 		}
 		return iFrames;
 	}
@@ -192,39 +196,39 @@ int RageSoundReader_Merge::Read(float* pBuffer, int iFrames)
 	std::array<float, 2048> Buffer;
 	iFrames = std::min(iFrames, static_cast<int>(Buffer.size() / m_iChannels));
 
-	// Read iFrames from each sound
+	// Read iFrames from each sound.
 	for (size_t i = 0; i < m_aSounds.size(); ++i)
 	{
-		RageSoundReader* pSound = m_aSounds[i];
+		RageSoundReader *pSound = m_aSounds[i];
 		if (pSound->GetNumChannels() != m_iChannels)
 		{
 			LOG->Warn("Channel mismatch: expected %d, got %d", m_iChannels, pSound->GetNumChannels());
 		}
 
 		int iFramesRead = 0;
-		while (iFramesRead < iFrames)
+		while( iFramesRead < iFrames )
 		{
 			int iGotFrames = pSound->Read(Buffer.data(), iFrames - iFramesRead);
-			if (iGotFrames < 0)
+			if( iGotFrames < 0 )
 			{
-				if (i == 0)
+				if( i == 0 )
 				{
 					return iGotFrames;
 				}
 				break;
 			}
 
-			mix.set_write_offset(iFramesRead * pSound->GetNumChannels());
+			mix.SetWriteOffset( iFramesRead * pSound->GetNumChannels() );
 			mix.write(Buffer.data(), iGotFrames * pSound->GetNumChannels());
 			iFramesRead += iGotFrames;
 		}
 	}
 
-	// Read mixed frames into the output buffer
+	// Read mixed frames into the output buffer.
 	int iMaxFramesRead = mix.size() / m_iChannels;
-	mix.read(pBuffer);
+	mix.read( pBuffer );
 
-	m_iNextSourceFrame += static_cast<int>((iMaxFramesRead * m_fCurrentStreamToSourceRatio) + 0.5);
+	m_iNextSourceFrame += static_cast<int>(( iMaxFramesRead * m_fCurrentStreamToSourceRatio ) + 0.5);
 
 	return iMaxFramesRead;
 }
