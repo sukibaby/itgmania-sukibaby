@@ -113,8 +113,11 @@ static LRESULT CALLBACK GraphicsWindow_WndProc( HWND hWnd, UINT msg, WPARAM wPar
 		case WM_SETCURSOR:
 			if( !g_CurrentParams.windowed )
 			{
-				//Don't hide the cursor when full screened since we have ShowMouseCursor as an option.
-				//SetCursor(nullptr);
+				if (PREFSMAN->m_bShowMouseCursor.Get())
+				{
+					SetCursor(nullptr);
+				}
+
 				return 1;
 			}
 			break;
