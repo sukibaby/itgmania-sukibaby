@@ -165,7 +165,7 @@ int RageSoundReader_Split::Read( float *pBuf, int iFrames )
 		for( int i = 0; i < (int) m_aChannels.size(); ++i )
 		{
 			const ChannelMap &chan = m_aChannels[i];
-			mix.set_write_offset( chan.m_iToChannel );
+			mix.SetWriteOffset( chan.m_iToChannel );
 			mix.write( pSrc + chan.m_iFromChannel, iFramesAvailable, m_pImpl->m_pSource->GetNumChannels(), m_iNumOutputChannels );
 		}
 
