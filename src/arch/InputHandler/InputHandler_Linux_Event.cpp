@@ -8,6 +8,7 @@
 #include <cerrno>
 #include <cstdint>
 #include <vector>
+#include <array>
 
 #if defined(HAVE_UNISTD_H)
 #include <unistd.h>
@@ -183,7 +184,7 @@ bool EventDevice::Open( RString sFile, InputDevice dev )
 	}
 
 	int iTotalAxes = 0;
-	const DeviceButton iExtraAxes[] = { JOY_LEFT_2, JOY_UP_2, JOY_AUX_1, JOY_AUX_3 };
+	const std::array<DeviceButton, 4> iExtraAxes = { JOY_LEFT_2, JOY_UP_2, JOY_AUX_1, JOY_AUX_3 };
 	int iNextExtraAxis = 0;
 	for( int i = 0; i < ABS_MAX; ++i )
 	{
@@ -245,7 +246,7 @@ bool EventDevice::Open( RString sFile, InputDevice dev )
 		}
 		else
 		{
-			if( iNextExtraAxis < (int) ARRAYLEN(iExtraAxes) )
+			if( iNextExtraAxis < iExtraAxes.size() )
 			{
 				aiAbsMappingLow[i] = iExtraAxes[iNextExtraAxis];
 				aiAbsMappingHigh[i] = enum_add2( aiAbsMappingLow[i], 1 );
