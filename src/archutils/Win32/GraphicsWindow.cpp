@@ -12,7 +12,7 @@
 #include "archutils/Win32/WindowIcon.h"
 #include "archutils/Win32/GetFileInformation.h"
 #include "CommandLineActions.h"
-#include "DirectXHelpers.h"
+#include "PrefsManager.h"
 
 #include <optional>
 #include <set>
