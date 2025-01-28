@@ -8,6 +8,7 @@
 #include "RageUtil_CircularBuffer.h"
 
 #include <cstdint>
+#include <array>
 
 class RageSoundBase;
 class RageTimer;
@@ -153,11 +154,11 @@ private:
 	 */
 	struct sound_block
 	{
-		float m_Buffer[samples_per_block];
+		std::array<float, samples_per_block> m_Buffer;
 		float *m_BufferNext; // beginning of the unread data
 		int m_FramesInBuffer; // total number of frames at m_BufferNext
 		int64_t m_iPosition; // stream frame of m_BufferNext
-		sound_block(): m_BufferNext(m_Buffer),
+		sound_block(): m_BufferNext(m_Buffer.data()),
 			m_FramesInBuffer(0), m_iPosition(0) {}
 	};
 
@@ -198,8 +199,8 @@ private:
 		} m_State;
 	};
 
-	/* List of currently playing sounds: XXX no vector */
-	Sound m_Sounds[32];
+	/* List of currently playing sounds */
+	std::array<Sound, 32> m_Sounds;
 
 	int64_t ClampHardwareFrame( int64_t iHardwareFrame ) const;
 	mutable int64_t m_iMaxHardwareFrame;

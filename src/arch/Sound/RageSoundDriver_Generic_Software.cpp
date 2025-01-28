@@ -72,7 +72,7 @@ RageSoundMixBuffer &RageSoundDriver::MixIntoBuffer( int iFrames, int64_t iFrameN
 
 	static RageSoundMixBuffer mix;
 
-	for( unsigned i = 0; i < ARRAYLEN(m_Sounds); ++i )
+	for( unsigned i = 0; i < m_Sounds.size(); ++i )
 	{
 		/* s.m_pSound can not safely be accessed from here. */
 		Sound &s = m_Sounds[i];
@@ -129,7 +129,9 @@ RageSoundMixBuffer &RageSoundDriver::MixIntoBuffer( int iFrames, int64_t iFrameN
 
 				/* If we have more data in p[0], keep going. */
 				if( pSize[0] )
+				{
 					continue; // more data
+				}
 
 				/* We've used up p[0].  Try p[1]. */
 				std::swap( p[0], p[1] );
@@ -206,10 +208,12 @@ void RageSoundDriver::DecodeThread()
 		LockMut( m_Mutex );
 //		LOG->Trace("begin mix");
 
-		for( unsigned i = 0; i < ARRAYLEN(m_Sounds); ++i )
+		for( unsigned i = 0; i < m_Sounds.size(); ++i )
 		{
 			if( m_Sounds[i].m_State != Sound::PLAYING )
+			{
 				continue;
+			}
 
 			Sound *pSound = &m_Sounds[i];
 
@@ -218,7 +222,9 @@ void RageSoundDriver::DecodeThread()
 			{
 				int iWrote = GetDataForSound( *pSound );
 				if( iWrote == RageSoundReader::WOULD_BLOCK )
+				{
 					break;
+				}
 				if( iWrote < 0 )
 				{
 					/* This sound is finishing. */
@@ -244,11 +250,11 @@ int RageSoundDriver::GetDataForSound( Sound &s )
 	ASSERT( psize[0] > 0 );
 
 	sound_block *pBlock = p[0];
-	int size = ARRAYLEN(pBlock->m_Buffer)/channels;
-	int iRet = s.m_pSound->GetDataToPlay( pBlock->m_Buffer, size, pBlock->m_iPosition, pBlock->m_FramesInBuffer );
+	int size = pBlock->m_Buffer.size() / channels;
+	int iRet = s.m_pSound->GetDataToPlay( pBlock->m_Buffer.data(), size, pBlock->m_iPosition, pBlock->m_FramesInBuffer);
 	if( iRet > 0 )
 	{
-		pBlock->m_BufferNext = pBlock->m_Buffer;
+		pBlock->m_BufferNext = pBlock->m_Buffer.data();
 		s.m_Buffer.advance_write_pointer( 1 );
 	}
 
@@ -262,7 +268,7 @@ int RageSoundDriver::GetDataForSound( Sound &s )
 void RageSoundDriver::Update()
 {
 	m_Mutex.Lock();
-	for( unsigned i = 0; i < ARRAYLEN(m_Sounds); ++i )
+	for( unsigned i = 0; i < m_Sounds.size(); ++i )
 	{
 		{
 			Sound::QueuedPosMap p;
@@ -270,7 +276,9 @@ void RageSoundDriver::Update()
 			{
 				RageSoundBase *pSound = m_Sounds[i].m_pSound;
 				if( pSound != nullptr )
-					pSound->CommitPlayingPosition( p.iStreamFrame, p.iHardwareFrame, p.iFrames );
+				{
+					pSound->CommitPlayingPosition(p.iStreamFrame, p.iHardwareFrame, p.iFrames);
+				}
 			}
 		}
 
@@ -328,10 +336,14 @@ void RageSoundDriver::StartMixing( RageSoundBase *pSound )
 	m_SoundListMutex.Lock();
 
 	unsigned i;
-	for( i = 0; i < ARRAYLEN(m_Sounds); ++i )
-		if( m_Sounds[i].m_State == Sound::AVAILABLE )
+	for( i = 0; i < m_Sounds.size(); ++i )
+	{
+		if (m_Sounds[i].m_State == Sound::AVAILABLE)
+		{
 			break;
-	if( i == ARRAYLEN(m_Sounds) )
+		}
+	}
+	if( i == m_Sounds.size() )
 	{
 		m_SoundListMutex.Unlock();
 		return;
@@ -376,10 +388,10 @@ void RageSoundDriver::StopMixing( RageSoundBase *pSound )
 
 	/* Find the sound. */
 	unsigned i;
-	for( i = 0; i < ARRAYLEN(m_Sounds); ++i )
+	for( i = 0; i < m_Sounds.size(); ++i )
 		if( m_Sounds[i].m_State != Sound::AVAILABLE && m_Sounds[i].m_pSound == pSound )
 			break;
-	if( i == ARRAYLEN(m_Sounds) )
+	if( i == m_Sounds.size() )
 	{
 		m_Mutex.Unlock();
 		LOG->Trace( "not stopping a sound because it's not playing" );
@@ -417,14 +429,18 @@ bool RageSoundDriver::PauseMixing( RageSoundBase *pSound, bool bStop )
 
 	/* Find the sound. */
 	unsigned i;
-	for( i = 0; i < ARRAYLEN(m_Sounds); ++i )
-		if( m_Sounds[i].m_State != Sound::AVAILABLE && m_Sounds[i].m_pSound == pSound )
+	for( i = 0; i < m_Sounds.size(); ++i )
+	{
+		if (m_Sounds[i].m_State != Sound::AVAILABLE && m_Sounds[i].m_pSound == pSound)
+		{
 			break;
+		}
+	}
 
 	/* A sound can be paused in PLAYING or STOPPING.  (STOPPING means the sound
 	 * has been decoded to the end, and we're waiting for that data to finish, so
 	 * externally it looks and acts like PLAYING.) */
-	if( i == ARRAYLEN(m_Sounds) ||
+	if( i == m_Sounds.size() ||
 		(m_Sounds[i].m_State != Sound::PLAYING && m_Sounds[i].m_State != Sound::STOPPING) )
 	{
 		LOG->Trace( "not pausing a sound because it's not playing" );
