@@ -19,12 +19,12 @@ REGISTER_INPUT_HANDLER_CLASS( X11 );
 static DeviceButton XSymToDeviceButton( int key )
 {
 #define KEY_INV DeviceButton_Invalid
-	static const DeviceButton ASCIIKeySyms[] =
+	static const std::array<DeviceButton, 128> ASCIIKeySyms =
 	{
 		KEY_INV       , KEY_INV     , KEY_INV      , KEY_INV     , KEY_INV      , /* 0 - 4 */
 		KEY_INV       , KEY_INV     , KEY_INV      , KEY_INV     , KEY_INV      , /* 5 - 9 */
 		KEY_INV       , KEY_INV     , KEY_INV      , KEY_INV     , KEY_INV      , /* 10 - 14 */
-		KEY_INV       , KEY_INV     , KEY_INV      , KEY_INV     , KEY_INV     , /* 15 - 19 */
+		KEY_INV       , KEY_INV     , KEY_INV      , KEY_INV     , KEY_INV      , /* 15 - 19 */
 		KEY_INV       , KEY_INV     , KEY_INV      , KEY_INV     , KEY_INV      , /* 20 - 24 */
 		KEY_INV       , KEY_INV     , KEY_INV      , KEY_INV     , KEY_INV      , /* 25 - 29 */
 		KEY_INV       , KEY_INV     , KEY_SPACE    , KEY_EXCL    , KEY_QUOTE    , /* 30 - 34 */
@@ -50,12 +50,16 @@ static DeviceButton XSymToDeviceButton( int key )
 	};
 
 	/* 32...127: */
-	if( key < int(ARRAYLEN(ASCIIKeySyms)))
+	if (key < static_cast<int>(ASCIIKeySyms.size()))
+	{
 		return ASCIIKeySyms[key];
+	}
 
 	/* XK_KP_0 ... XK_KP_9 to KEY_KP_C0 ... KEY_KP_C9 */
 	if( key >= XK_KP_0 && key <= XK_KP_9 )
+	{
 		return enum_add2(KEY_KP_C0, key - XK_KP_0);
+	}
 
 	switch( key )
 	{
