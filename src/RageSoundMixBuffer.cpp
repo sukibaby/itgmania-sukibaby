@@ -31,11 +31,10 @@ void RageSoundMixBuffer::write(const float* buf, int64_t size, int source_stride
 	if (size == 0)
 		return;
 
-	/* size = 3, dest_stride = 2 uses 4 frames.  Don't allocate the stride of the
-	 * last sample. */
+	// size = 3, dest_stride = 2 uses 4 frames.  Don't allocate the stride of the last sample.
 	extend(size * dest_stride - (dest_stride - 1));
 
-	/* Scale volume and add. */
+	// Scale volume and add.
 	float* dest_buf = mixbuf_.data() + offset_;
 
 	while (size) {
