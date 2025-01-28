@@ -1041,7 +1041,7 @@ void LuaHelpers::PushValueFunc( lua_State *L, int iArgs )
 
 #include "ProductInfo.h"
 const static RString ITGmaniaName = "ITGmania";
-const static RString ITGmaniaVersion = "0.9.0 [unoffocial build 1-26-2025 do not use]";
+const static RString ITGmaniaVersion = "0.9.0 [unofficial build 1-28-2025... :O]";
 LuaFunction(ProductFamily, ITGmaniaName);
 LuaFunction(ProductVersion, ITGmaniaVersion);
 LuaFunction(ProductID, ITGmaniaName);
