@@ -1445,7 +1445,7 @@ bool Actor::TweenState::operator==( const TweenState &other ) const
 	COMPARE( fSkewY );
 	COMPARE( crop );
 	COMPARE( fade );
-	for( unsigned i=0; i<ARRAYLEN(diffuse); i++ )
+	for( unsigned i=0; i<diffuse.size(); i++ )
 		COMPARE( diffuse[i] );
 	COMPARE( glow );
 	COMPARE( aux );

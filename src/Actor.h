@@ -15,6 +15,7 @@ class LuaClass;
 #include <cstddef>
 #include <map>
 #include <vector>
+#include <array>
 
 typedef AutoPtrCopyOnWrite<LuaReference> apActorCommands;
 
@@ -229,10 +230,10 @@ public:
 		 * @brief Four values making up the diffuse in this TweenState.
 		 *
 		 * 0 = UpperLeft, 1 = UpperRight, 2 = LowerLeft, 3 = LowerRight */
-		RageColor	diffuse[NUM_DIFFUSE_COLORS];
+		std::array<RageColor, NUM_DIFFUSE_COLORS> diffuse;
 		/** @brief The glow color for this TweenState. */
 		RageColor	glow;
-		/** @brief A magical value that nobody really knows the use for. ;) */
+		/** @brief Optional/additional parameter which can be used for multiple purposes. */
 		float		aux;
 	};
 
