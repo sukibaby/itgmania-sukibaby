@@ -9,7 +9,7 @@
 #include "archutils/Win32/USB.h"
 
 #include <vector>
-
+#include <array>
 
 REGISTER_INPUT_HANDLER_CLASS2( Pump, Win32_Pump );
 
@@ -63,15 +63,16 @@ InputHandler_Win32_Pump::~InputHandler_Win32_Pump()
 
 void InputHandler_Win32_Pump::HandleInput( int iDevice, int iEvent )
 {
-	static const int bits[] = {
-	/* P1 */	(1<<9), (1<<12), (1<<13), (1<<11), (1<<10),
-	/* ESC */	(1<<16),
-	/* P1 */	(1<<17), (1<<20), (1<<21), (1<<19), (1<<18),
+	static const std::array<int, 11> bits =
+	{
+		/* P1 */    (1 << 9),  (1 << 12), (1 << 13), (1 << 11), (1 << 10),
+		/* ESC */   (1 << 16),
+		/* P1 */    (1 << 17), (1 << 20), (1 << 21), (1 << 19), (1 << 18)
 	};
 
 	InputDevice id = InputDevice( DEVICE_PUMP1 + iDevice );
 
-	for( int iButton = 0; iButton < ARRAYLEN(bits); ++iButton )
+	for( int iButton = 0; iButton < bits.size(); ++iButton )
 	{
 		DeviceInput di( id, enum_add2(JOY_BUTTON_1, iButton), !(iEvent & bits[iButton]) );
 
