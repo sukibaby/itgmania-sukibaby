@@ -409,7 +409,7 @@ static EffectMode EffectModes[] =
 {
 	EffectMode_YUYV422,
 };
-static_assert(ARRAYLEN(EffectModes) == NUM_PixelFormatYCbCr);
+static_assert((sizeof(EffectModes) / sizeof((EffectModes)[0])) == NUM_PixelFormatYCbCr);
 
 EffectMode MovieTexture_Generic::GetEffectMode(MovieDecoderPixelFormatYCbCr fmt)
 {
